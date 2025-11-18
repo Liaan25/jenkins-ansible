@@ -308,13 +308,21 @@ pipeline {
                                   text: groovy.json.JsonOutput.toJson(secretsData)
                         
                         // Проверка что файл создан (ВНУТРИ withVault блока)
-                        def secretsFile = new File("${WORKSPACE_LOCAL}/secrets.json")
-                        if (!secretsFile.exists() || secretsFile.length() == 0) {
+                        def fileCheck = sh(
+                            script: "test -f ${WORKSPACE_LOCAL}/secrets.json && test -s ${WORKSPACE_LOCAL}/secrets.json",
+                            returnStatus: true
+                        )
+                        
+                        if (fileCheck != 0) {
                             error("ОШИБКА: Файл secrets.json не создан или пустой")
                         }
                         
                         if (params.DEBUG) {
-                            echo "DEBUG: Файл secrets.json создан, размер: ${secretsFile.length()} байт"
+                            def fileSize = sh(
+                                script: "stat -c%s ${WORKSPACE_LOCAL}/secrets.json 2>/dev/null || stat -f%z ${WORKSPACE_LOCAL}/secrets.json 2>/dev/null || echo 'unknown'",
+                                returnStdout: true
+                            ).trim()
+                            echo "DEBUG: Файл secrets.json создан, размер: ${fileSize} байт"
                         }
                         
                         echo "✓ Секреты получены из Vault"
