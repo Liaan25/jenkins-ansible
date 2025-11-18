@@ -1,0 +1,89 @@
+---
+# Role: prometheus
+# Описание: Установка и настройка Prometheus
+# Файл: roles/prometheus/tasks/main.yml
+
+- name: "Prometheus | Создание директорий для данных"
+  file:
+    path: "{{ item }}"
+    state: directory
+    owner: "{{ monitoring_service_user }}"
+    group: "{{ monitoring_group }}"
+    mode: "{{ directory_permissions.data }}"
+  loop:
+    - "{{ monitoring_dirs.data }}/prometheus"
+  become: yes
+  become_user: root
+  tags: [setup]
+
+- name: "Prometheus | Копирование конфигурации prometheus.yml"
+  template:
+    src: prometheus.yml.j2
+    dest: "{{ monitoring_dirs.config }}/prometheus.yml"
+    owner: "{{ monitoring_ci_user }}"
+    group: "{{ monitoring_group }}"
+    mode: "{{ file_permissions.config }}"
+    validate: 'promtool check config %s'
+  become: yes
+  become_user: root
+  notify: reload prometheus
+  tags: [config]
+
+- name: "Prometheus | Копирование TLS конфигурации"
+  template:
+    src: web-config.yml.j2
+    dest: "{{ monitoring_dirs.config }}/web-config.yml"
+    owner: "{{ monitoring_ci_user }}"
+    group: "{{ monitoring_group }}"
+    mode: "{{ file_permissions.config }}"
+    validate: 'promtool check web-config %s'
+  become: yes
+  become_user: root
+  notify: restart prometheus
+  tags: [config]
+
+- name: "Prometheus | Копирование systemd unit"
+  copy:
+    src: "{{ playbook_dir }}/../../systemd/prometheus.service"
+    dest: "{{ systemd_user_dir }}/prometheus.service"
+    owner: "{{ monitoring_service_user }}"
+    group: "{{ monitoring_group }}"
+    mode: "0644"
+  become: yes
+  become_user: "{{ monitoring_service_user }}"
+  notify: reload systemd user
+  tags: [systemd]
+
+- name: "Prometheus | Перезагрузка systemd daemon"
+  systemd:
+    daemon_reload: yes
+    scope: user
+  become: yes
+  become_user: "{{ monitoring_service_user }}"
+  environment:
+    XDG_RUNTIME_DIR: "/run/user/{{ lookup('pipe', 'id -u ' + monitoring_service_user) }}"
+  tags: [systemd]
+
+- name: "Prometheus | Включение сервиса"
+  systemd:
+    name: prometheus
+    enabled: yes
+    scope: user
+  become: yes
+  become_user: "{{ monitoring_service_user }}"
+  environment:
+    XDG_RUNTIME_DIR: "/run/user/{{ lookup('pipe', 'id -u ' + monitoring_service_user) }}"
+  tags: [service]
+
+- name: "Prometheus | Запуск сервиса"
+  systemd:
+    name: prometheus
+    state: started
+    scope: user
+  become: yes
+  become_user: "{{ monitoring_service_user }}"
+  environment:
+    XDG_RUNTIME_DIR: "/run/user/{{ lookup('pipe', 'id -u ' + monitoring_service_user) }}"
+  when: deployment.restart_services | default(true)
+  tags: [service]
+

@@ -1,0 +1,34 @@
+# Prometheus Web Configuration
+# Автоматически сгенерирован Ansible
+# Управляется: ansible/roles/prometheus/templates/web-config.yml.j2
+
+tls_server_config:
+  cert_file: {{ secrets_dir }}/server.crt
+  key_file: {{ secrets_dir }}/server.key
+  client_ca_file: {{ secrets_dir }}/ca_chain.crt
+  client_auth_type: RequireAndVerifyClientCert
+  
+  min_version: TLS12
+  max_version: TLS13
+  
+  cipher_suites:
+{% for suite in tls.cipher_suites %}
+    - {{ suite }}
+{% endfor %}
+  
+  prefer_server_cipher_suites: true
+  
+  curve_preferences:
+    - X25519
+    - CurveP256
+    - CurveP384
+
+http_server_config:
+  http2: true
+  headers:
+    Strict-Transport-Security: "max-age=31536000; includeSubDomains"
+    X-Content-Type-Options: "nosniff"
+    X-Frame-Options: "SAMEORIGIN"
+    Content-Security-Policy: "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'"
+    Referrer-Policy: "strict-origin-when-cross-origin"
+

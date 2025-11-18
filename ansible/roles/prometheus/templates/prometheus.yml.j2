@@ -1,0 +1,103 @@
+# Prometheus Configuration
+# Автоматически сгенерирован Ansible
+# Управляется: ansible/roles/prometheus/templates/prometheus.yml.j2
+
+global:
+  scrape_interval: {{ prometheus.scrape_interval }}
+  evaluation_interval: {{ prometheus.evaluation_interval }}
+  scrape_timeout: {{ prometheus.scrape_timeout }}
+  
+  external_labels:
+    cluster: '{{ inventory_hostname }}'
+    environment: '{{ environment | default("production") }}'
+    datacenter: '{{ datacenter | default("dc1") }}'
+
+# Alerting configuration
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: []
+      
+      tls_config:
+        cert_file: {{ secrets_dir }}/client.crt
+        key_file: {{ secrets_dir }}/client.key
+        ca_file: {{ secrets_dir }}/ca_chain.crt
+        insecure_skip_verify: false
+
+# Scrape configurations
+scrape_configs:
+  # Prometheus self-monitoring
+  - job_name: 'prometheus'
+    scheme: https
+    
+    tls_config:
+      cert_file: {{ secrets_dir }}/server.crt
+      key_file: {{ secrets_dir }}/server.key
+      ca_file: {{ secrets_dir }}/ca_chain.crt
+      insecure_skip_verify: false
+      server_name: {{ ansible_fqdn }}
+    
+    static_configs:
+      - targets:
+          - '{{ ansible_fqdn }}:{{ prometheus_port }}'
+        labels:
+          instance: 'prometheus-server'
+          service: 'prometheus'
+    
+    metrics_path: /metrics
+    scrape_interval: {{ prometheus.scrape_interval }}
+    scrape_timeout: {{ prometheus.scrape_timeout }}
+
+  # Harvest Unix metrics (localhost)
+  - job_name: 'harvest-unix'
+    scheme: http
+    
+    static_configs:
+      - targets:
+          - 'localhost:{{ harvest_unix_port }}'
+        labels:
+          instance: '{{ inventory_hostname }}'
+          service: 'harvest'
+          poller: 'unix'
+    
+    metrics_path: /metrics
+    scrape_interval: 30s
+    scrape_timeout: 10s
+
+  # Harvest NetApp metrics (HTTPS + mTLS)
+  - job_name: 'harvest-netapp-https'
+    scheme: https
+    
+    tls_config:
+      cert_file: {{ secrets_dir }}/server.crt
+      key_file: {{ secrets_dir }}/server.key
+      ca_file: {{ secrets_dir }}/ca_chain.crt
+      insecure_skip_verify: false
+      server_name: {{ ansible_fqdn }}
+    
+    static_configs:
+      - targets:
+          - '{{ ansible_fqdn }}:{{ harvest_netapp_port }}'
+        labels:
+          instance: '{{ netapp_api_addr }}'
+          service: 'harvest'
+          poller: 'netapp'
+          storage_type: 'ontap'
+    
+    metrics_path: /metrics
+    scrape_interval: {{ prometheus.scrape_interval }}
+    scrape_timeout: {{ prometheus.scrape_timeout }}
+    
+    metric_relabel_configs:
+      - source_labels: [__name__]
+        regex: 'netapp_.*'
+        action: keep
+
+# Storage configuration
+storage:
+  tsdb:
+    path: {{ monitoring_dirs.data }}/prometheus
+    retention:
+      time: {{ prometheus.retention_time }}
+      size: {{ prometheus.retention_size }}
+

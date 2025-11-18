@@ -1,0 +1,29 @@
+---
+# Update Config Playbook
+# Обновление только конфигураций без полного redeploy
+
+- name: "Обновление конфигураций"
+  hosts: monitoring_servers
+  gather_facts: yes
+  become: yes
+  tags: [update]
+  
+  tasks:
+    - name: "Update | Backup текущих конфигураций"
+      archive:
+        path: "{{ monitoring_dirs.config }}"
+        dest: "{{ monitoring_dirs.backups }}/config_backup_{{ ansible_date_time.iso8601_basic_short }}.tar.gz"
+        format: gz
+      tags: [backup]
+    
+    - name: "Update | Применение новых конфигураций"
+      include_role:
+        name: "{{ item }}"
+        tasks_from: main
+      loop:
+        - vault_agent
+        - prometheus
+        - grafana
+        - harvest
+      tags: [config]
+

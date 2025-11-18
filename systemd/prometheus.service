@@ -1,0 +1,58 @@
+[Unit]
+Description=Prometheus Monitoring System (User Service)
+Documentation=https://prometheus.io/docs/introduction/overview/
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=monitoring_svc
+Group=monitoring
+
+# Рабочая директория
+WorkingDirectory=/opt/monitoring
+
+# Исполняемый файл и аргументы
+ExecStart=/opt/monitoring/bin/prometheus \
+  --config.file=/opt/monitoring/config/prometheus.yml \
+  --storage.tsdb.path=/opt/monitoring/data/prometheus \
+  --web.console.templates=/opt/monitoring/config/consoles \
+  --web.console.libraries=/opt/monitoring/config/console_libraries \
+  --web.config.file=/opt/monitoring/config/web-config.yml \
+  --web.external-url=https://%H:9090/ \
+  --web.listen-address=0.0.0.0:9090
+
+# Graceful shutdown
+ExecReload=/bin/kill -HUP $MAINPID
+KillMode=process
+KillSignal=SIGTERM
+TimeoutStopSec=30s
+Restart=on-failure
+RestartSec=10s
+
+# Переменные окружения
+Environment="PATH=/opt/monitoring/bin:/usr/local/bin:/usr/bin:/bin"
+
+# Ограничения ресурсов
+LimitNOFILE=65536
+LimitNPROC=512
+
+# Безопасность
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=/opt/monitoring/data
+ReadWritePaths=/opt/monitoring/logs
+ReadOnlyPaths=/opt/monitoring/bin
+ReadOnlyPaths=/opt/monitoring/config
+ReadOnlyPaths=/dev/shm/monitoring_secrets
+
+# Логирование
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=prometheus
+
+[Install]
+WantedBy=default.target
+

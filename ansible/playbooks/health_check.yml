@@ -1,0 +1,111 @@
+---
+# ==============================================================================
+# Health Check Playbook
+# ==============================================================================
+#
+# Описание:
+#   Проверка состояния системы мониторинга
+#
+# Использование:
+#   ansible-playbook -i inventories/production playbooks/health_check.yml
+#
+# ==============================================================================
+
+- name: "Проверка здоровья системы мониторинга"
+  hosts: monitoring_servers
+  gather_facts: yes
+  become: no
+  tags: [check]
+  
+  tasks:
+    - name: "Health | Проверка статуса сервисов"
+      command: systemctl --user is-active {{ item }}
+      loop:
+        - prometheus
+        - grafana
+        - harvest
+        - vault-agent-monitoring
+      become_user: "{{ monitoring_service_user }}"
+      environment:
+        XDG_RUNTIME_DIR: "/run/user/{{ lookup('pipe', 'id -u ' + monitoring_service_user) }}"
+      register: service_status
+      changed_when: false
+      failed_when: false
+      tags: [services]
+    
+    - name: "Health | Вывод статуса сервисов"
+      debug:
+        msg: "Сервис {{ item.item }}: {{ 'АКТИВЕН ✓' if item.rc == 0 else 'НЕ АКТИВЕН ✗' }}"
+      loop: "{{ service_status.results }}"
+      tags: [services]
+    
+    - name: "Health | Проверка портов"
+      wait_for:
+        host: localhost
+        port: "{{ item }}"
+        timeout: 5
+        state: started
+      loop:
+        - "{{ prometheus_port }}"
+        - "{{ grafana_port }}"
+        - "{{ harvest_netapp_port }}"
+        - "{{ harvest_unix_port }}"
+      register: port_check
+      failed_when: false
+      tags: [network]
+    
+    - name: "Health | Вывод статуса портов"
+      debug:
+        msg: "Порт {{ item.item }}: {{ 'ОТКРЫТ ✓' if item.failed == false else 'ЗАКРЫТ ✗' }}"
+      loop: "{{ port_check.results }}"
+      tags: [network]
+    
+    - name: "Health | Проверка сертификатов"
+      stat:
+        path: "{{ secrets_dir }}/{{ item }}"
+      loop:
+        - server.crt
+        - server.key
+        - ca_chain.crt
+      register: cert_check
+      tags: [certificates]
+    
+    - name: "Health | Вывод статуса сертификатов"
+      debug:
+        msg: "Сертификат {{ item.item }}: {{ 'СУЩЕСТВУЕТ ✓' if item.stat.exists else 'ОТСУТСТВУЕТ ✗' }}"
+      loop: "{{ cert_check.results }}"
+      tags: [certificates]
+    
+    - name: "Health | Проверка срока действия сертификатов"
+      command: openssl x509 -in {{ secrets_dir }}/server.crt -noout -checkend 2592000
+      register: cert_expiry
+      changed_when: false
+      failed_when: false
+      tags: [certificates]
+    
+    - name: "Health | Вывод срока действия"
+      debug:
+        msg: "Сертификат server.crt: {{ 'Действителен >30 дней ✓' if cert_expiry.rc == 0 else 'Истекает <30 дней ⚠' }}"
+      tags: [certificates]
+    
+    - name: "Health | Проверка дискового пространства"
+      command: df -h {{ monitoring_dirs.data }}
+      register: disk_space
+      changed_when: false
+      tags: [disk]
+    
+    - name: "Health | Вывод дискового пространства"
+      debug:
+        var: disk_space.stdout_lines
+      tags: [disk]
+    
+    - name: "Health | Финальный отчет"
+      debug:
+        msg:
+          - "============================================"
+          - "ИТОГИ ПРОВЕРКИ ЗДОРОВЬЯ"
+          - "============================================"
+          - "Сервер: {{ inventory_hostname }}"
+          - "Время проверки: {{ ansible_date_time.iso8601 }}"
+          - "============================================"
+

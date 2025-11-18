@@ -1,0 +1,222 @@
+# Prometheus Configuration Example
+# Безопасная конфигурация Prometheus с mTLS
+# Файл: /opt/monitoring/config/prometheus.yml
+
+global:
+  # Интервал сбора метрик
+  scrape_interval: 60s
+  
+  # Интервал оценки правил алертинга
+  evaluation_interval: 60s
+  
+  # Таймаут при сборе метрик
+  scrape_timeout: 30s
+  
+  # Внешние метки (добавляются ко всем метрикам)
+  external_labels:
+    cluster: 'monitoring-prod'
+    environment: 'production'
+    datacenter: 'dc1'
+
+# Конфигурация алертинга (опционально)
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+          # - alertmanager:9093
+      
+      # TLS для Alertmanager
+      tls_config:
+        cert_file: /dev/shm/monitoring_secrets/client.crt
+        key_file: /dev/shm/monitoring_secrets/client.key
+        ca_file: /dev/shm/monitoring_secrets/ca_chain.crt
+        insecure_skip_verify: false
+
+# Правила алертинга (опционально)
+rule_files:
+  # - /opt/monitoring/config/rules/*.yml
+
+# Конфигурация сбора метрик
+scrape_configs:
+  # =========================================
+  # Job 1: Сам Prometheus (self-monitoring)
+  # =========================================
+  - job_name: 'prometheus'
+    
+    # Использование HTTPS для безопасности
+    scheme: https
+    
+    # Конфигурация mTLS
+    tls_config:
+      cert_file: /dev/shm/monitoring_secrets/server.crt
+      key_file: /dev/shm/monitoring_secrets/server.key
+      ca_file: /dev/shm/monitoring_secrets/ca_chain.crt
+      insecure_skip_verify: false
+      server_name: SERVER_DOMAIN  # ЗАМЕНИТЬ на ваш домен
+    
+    # Статические цели
+    static_configs:
+      - targets:
+          - 'SERVER_DOMAIN:9090'  # ЗАМЕНИТЬ на ваш домен:порт
+        labels:
+          instance: 'prometheus-server'
+          service: 'prometheus'
+    
+    # Путь к метрикам
+    metrics_path: /metrics
+    
+    # Интервал сбора
+    scrape_interval: 60s
+    
+    # Таймаут
+    scrape_timeout: 30s
+
+  # =========================================
+  # Job 2: Harvest Unix метрики (localhost)
+  # =========================================
+  - job_name: 'harvest-unix'
+    
+    # HTTP для localhost метрик (безопасно, т.к. localhost)
+    scheme: http
+    
+    # Статические цели
+    static_configs:
+      - targets:
+          - 'localhost:12991'
+        labels:
+          instance: 'monitoring-server'
+          service: 'harvest'
+          poller: 'unix'
+    
+    # Путь к метрикам
+    metrics_path: /metrics
+    
+    # Интервал сбора (чаще для системных метрик)
+    scrape_interval: 30s
+    
+    # Таймаут
+    scrape_timeout: 10s
+
+  # =========================================
+  # Job 3: Harvest NetApp метрики (HTTPS + mTLS)
+  # =========================================
+  - job_name: 'harvest-netapp-https'
+    
+    # Использование HTTPS для безопасности
+    scheme: https
+    
+    # Конфигурация mTLS
+    tls_config:
+      cert_file: /dev/shm/monitoring_secrets/server.crt
+      key_file: /dev/shm/monitoring_secrets/server.key
+      ca_file: /dev/shm/monitoring_secrets/ca_chain.crt
+      insecure_skip_verify: false
+      server_name: SERVER_DOMAIN  # ЗАМЕНИТЬ на ваш домен
+    
+    # Статические цели
+    static_configs:
+      - targets:
+          - 'SERVER_DOMAIN:12990'  # ЗАМЕНИТЬ на ваш домен:порт
+        labels:
+          instance: 'netapp-cluster-01'
+          service: 'harvest'
+          poller: 'netapp'
+          storage_type: 'ontap'
+    
+    # Путь к метрикам
+    metrics_path: /metrics
+    
+    # Интервал сбора
+    scrape_interval: 60s
+    
+    # Таймаут
+    scrape_timeout: 30s
+    
+    # Relabeling для добавления метаданных
+    metric_relabel_configs:
+      # Сохранить только важные метрики (опционально)
+      - source_labels: [__name__]
+        regex: 'netapp_.*'
+        action: keep
+
+  # =========================================
+  # Job 4: Node Exporter (опционально)
+  # =========================================
+  # - job_name: 'node-exporter'
+  #   
+  #   scheme: https
+  #   
+  #   tls_config:
+  #     cert_file: /dev/shm/monitoring_secrets/client.crt
+  #     key_file: /dev/shm/monitoring_secrets/client.key
+  #     ca_file: /dev/shm/monitoring_secrets/ca_chain.crt
+  #     insecure_skip_verify: false
+  #   
+  #   static_configs:
+  #     - targets:
+  #         - 'node-exporter:9100'
+  #       labels:
+  #         service: 'node-exporter'
+
+# Конфигурация хранилища (storage)
+storage:
+  tsdb:
+    # Путь к данным
+    path: /opt/monitoring/data/prometheus
+    
+    # Время хранения данных
+    retention:
+      time: 15d
+      size: 3GB
+    
+    # Компрессия (включена по умолчанию)
+    # compression: snappy
+
+# Конфигурация удаленного хранилища (опционально)
+# remote_write:
+#   - url: https://remote-storage:9090/api/v1/write
+#     tls_config:
+#       cert_file: /dev/shm/monitoring_secrets/client.crt
+#       key_file: /dev/shm/monitoring_secrets/client.key
+#       ca_file: /dev/shm/monitoring_secrets/ca_chain.crt
+
+# remote_read:
+#   - url: https://remote-storage:9090/api/v1/read
+#     tls_config:
+#       cert_file: /dev/shm/monitoring_secrets/client.crt
+#       key_file: /dev/shm/monitoring_secrets/client.key
+#       ca_file: /dev/shm/monitoring_secrets/ca_chain.crt
+
+# =============================================================================
+# ПРИМЕЧАНИЯ ПО БЕЗОПАСНОСТИ
+# =============================================================================
+#
+# 1. Сертификаты:
+#    - Все сертификаты берутся из /dev/shm/monitoring_secrets/
+#    - Это tmpfs (в RAM), секреты не сохраняются на диск
+#    - Права 600/640, владелец monitoring_svc
+#
+# 2. mTLS (Mutual TLS):
+#    - Включен для всех HTTPS соединений
+#    - Требуется валидный client certificate
+#    - Проверка server_name (SNI)
+#    - insecure_skip_verify всегда false
+#
+# 3. Сетевая безопасность:
+#    - Prometheus порт 9090 доступен только с localhost и IP сервера
+#    - Harvest HTTPS порт 12990 публично доступен (защищен mTLS)
+#    - Harvest HTTP порт 12991 только localhost
+#
+# 4. Права доступа:
+#    - Конфигурационные файлы: 640, monitoring_ci:monitoring
+#    - Данные: 770, monitoring_svc:monitoring
+#    - Процесс запускается от monitoring_svc (непривилегированный)
+#
+# 5. Лучшие практики:
+#    - Регулярно проверять срок действия сертификатов
+#    - Мониторить размер TSDB
+#    - Настроить алерты на проблемы со сбором метрик
+#    - Использовать service discovery для динамических целей
+#
+# =============================================================================
+

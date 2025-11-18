@@ -1,0 +1,291 @@
+# NetApp Harvest Configuration Example
+# Безопасная конфигурация Harvest для сбора метрик с NetApp кластеров
+# Файл: /opt/monitoring/config/harvest.yml
+
+# =============================================================================
+# ГЛОБАЛЬНЫЕ НАСТРОЙКИ
+# =============================================================================
+
+# Административные настройки
+Admin:
+  # Хост для admin API (только localhost для безопасности)
+  httpsd:
+    listen: 127.0.0.1:8887
+    # TLS для admin API (опционально)
+    # tls:
+    #   cert_file: /dev/shm/monitoring_secrets/server.crt
+    #   key_file: /dev/shm/monitoring_secrets/server.key
+
+# Логирование
+Logging:
+  # Директория для логов
+  log_dir: /opt/monitoring/logs/harvest
+  
+  # Уровень логирования (0=Info, 1=Debug, 2=Trace)
+  loglevel: 1
+  
+  # Максимальный размер лог файла (в МБ)
+  log_max_bytes: 10
+  
+  # Количество ротируемых файлов
+  log_max_files: 10
+
+# Настройки экспортеров (Prometheus)
+Exporters:
+  prometheus1:
+    exporter: Prometheus
+    # Порт для метрик (HTTPS)
+    port: 12990
+    # Опционально: host
+    # host: 0.0.0.0
+    
+    # TLS настройки (рекомендуется)
+    # tls:
+    #   cert_file: /dev/shm/monitoring_secrets/server.crt
+    #   key_file: /dev/shm/monitoring_secrets/server.key
+    #   # Требовать client certificate (mTLS)
+    #   client_auth_type: RequireAndVerifyClientCert
+    #   client_ca_file: /dev/shm/monitoring_secrets/ca_chain.crt
+    
+  # Unix метрики (localhost HTTP, безопасно)
+  prometheus_unix:
+    exporter: Prometheus
+    port: 12991
+    host: 127.0.0.1
+    # Unix метрики только на localhost, TLS не требуется
+
+# =============================================================================
+# ОПРЕДЕЛЕНИЯ POLLERS (КОЛЛЕКТОРОВ)
+# =============================================================================
+
+# Defaults для всех pollers (переопределяются в конкретных pollers)
+Defaults:
+  # Коллекторы (какие метрики собирать)
+  collectors:
+    - Zapi          # ONTAP REST/ZAPI метрики
+    - ZapiPerf      # ONTAP Performance метрики
+    - Ems           # Event Management System
+    - Rest          # REST API метрики (для новых версий ONTAP)
+    - RestPerf      # REST Performance метрики
+  
+  # Интервал сбора метрик (в секундах)
+  poll_schedule:
+    data: 60        # Обычные метрики каждые 60 секунд
+    counter: 1200   # Счетчики каждые 20 минут
+    instance: 600   # Инстансы каждые 10 минут
+  
+  # Экспортеры (куда отправлять метрики)
+  exporters:
+    - prometheus1
+
+# =============================================================================
+# POLLERS - КОНФИГУРАЦИЯ ДЛЯ КОНКРЕТНЫХ NETAPP КЛАСТЕРОВ
+# =============================================================================
+
+Pollers:
+  # ===========================================================================
+  # Poller 1: NetApp Cluster #1
+  # ===========================================================================
+  Netapp-Cluster-01:
+    # Адрес NetApp кластера
+    addr: netapp-cluster-01.example.com
+    
+    # Учетные данные (ИЗМЕНИТЬ!)
+    # Рекомендуется использовать read-only пользователя
+    username: NETAPP_USER
+    password: NETAPP_PASSWORD
+    
+    # Тип аутентификации (password, certificate_auth)
+    auth_style: password
+    
+    # API метод (zapi для старых версий, rest для новых)
+    use_insecure_tls: false  # Всегда проверять сертификаты!
+    
+    # Коллекторы (можно переопределить defaults)
+    collectors:
+      - Zapi
+      - ZapiPerf
+      - Ems
+    
+    # Экспортеры
+    exporters:
+      - prometheus1
+    
+    # Дополнительные метки (добавляются ко всем метрикам)
+    labels:
+      - datacenter: dc1
+      - environment: production
+      - cluster_type: ontap
+  
+  # ===========================================================================
+  # Poller 2: Unix метрики (localhost)
+  # ===========================================================================
+  Unix-Metrics:
+    # Специальный poller для сбора Unix метрик с самого сервера
+    datacenter: Unix
+    
+    # Используем Unix коллектор
+    collectors:
+      - Unix
+    
+    # Экспортер для localhost
+    exporters:
+      - prometheus_unix
+    
+    # Интервал сбора Unix метрик (чаще)
+    poll_schedule:
+      data: 30
+    
+    # Метки
+    labels:
+      - host: monitoring-server
+      - role: monitoring
+
+  # ===========================================================================
+  # Poller 3: NetApp Cluster #2 (пример для нескольких кластеров)
+  # ===========================================================================
+  # Netapp-Cluster-02:
+  #   addr: netapp-cluster-02.example.com
+  #   username: NETAPP_USER
+  #   password: NETAPP_PASSWORD
+  #   auth_style: password
+  #   use_insecure_tls: false
+  #   
+  #   collectors:
+  #     - Zapi
+  #     - ZapiPerf
+  #   
+  #   exporters:
+  #     - prometheus1
+  #   
+  #   labels:
+  #     - datacenter: dc2
+  #     - environment: production
+
+# =============================================================================
+# ДОПОЛНИТЕЛЬНЫЕ НАСТРОЙКИ
+# =============================================================================
+
+# Настройки коллекторов (опционально)
+# Collectors:
+#   Zapi:
+#     # Таймаут для ZAPI запросов
+#     client_timeout: 30s
+#   
+#   ZapiPerf:
+#     # Таймаут для Performance запросов
+#     client_timeout: 60s
+
+# Инструменты (опционально)
+# Tools:
+#   grafana_api_token: YOUR_GRAFANA_API_TOKEN
+
+# =============================================================================
+# ПРИМЕЧАНИЯ ПО БЕЗОПАСНОСТИ
+# =============================================================================
+#
+# 1. Учетные данные NetApp:
+#    - НЕ используйте admin аккаунт!
+#    - Создайте read-only пользователя в NetApp
+#    - Минимальные права: readonly role
+#    - Храните пароли в Vault, не в файле!
+#
+# 2. Использование секретов из Vault:
+#    Вместо хардкода в файле:
+#      username: NETAPP_USER
+#      password: NETAPP_PASSWORD
+#    
+#    Используйте переменные окружения или Vault Agent:
+#      username: {{ env "NETAPP_USER" }}
+#      password: {{ env "NETAPP_PASS" }}
+#    
+#    Или создайте secrets файл, который Vault Agent будет обновлять
+#
+# 3. TLS настройки:
+#    - use_insecure_tls: ВСЕГДА false!
+#    - Используйте валидные сертификаты
+#    - Включите mTLS для prometheus1 экспортера
+#
+# 4. Сетевая безопасность:
+#    - Порт 12990 (HTTPS) - публичный, защищен mTLS
+#    - Порт 12991 (HTTP) - только localhost
+#    - Порт 8887 (admin API) - только localhost
+#    - Firewall ограничивает доступ
+#
+# 5. Права доступа:
+#    - Harvest запускается от monitoring_svc
+#    - Конфиг файл: 640, monitoring_ci:monitoring
+#    - Логи: 770, monitoring_svc:monitoring_admin
+#
+# 6. Логи:
+#    - Храните логи в /opt/monitoring/logs/harvest
+#    - Настройте ротацию (log_max_files)
+#    - Мониторьте размер логов
+#
+# 7. Коллекторы:
+#    - Используйте Rest/RestPerf для ONTAP 9.11+
+#    - Zapi/ZapiPerf для старых версий
+#    - Unix коллектор для метрик самого сервера
+#
+# 8. Performance:
+#    - Оптимизируйте poll_schedule
+#    - Не собирайте неиспользуемые метрики
+#    - Мониторьте нагрузку на NetApp кластеры
+#
+# 9. Тестирование:
+#    - harvest admin start --poller Netapp-Cluster-01
+#    - curl http://localhost:12991/metrics (Unix метрики)
+#    - curl --cacert ca.crt --cert client.crt --key client.key https://localhost:12990/metrics (NetApp метрики)
+#
+# 10. Troubleshooting:
+#     - Логи: /opt/monitoring/logs/harvest/
+#     - Status: harvest admin status
+#     - Проверка конфига: harvest doctor --poller Netapp-Cluster-01
+#
+# =============================================================================
+
+# =============================================================================
+# ПРИМЕР ИНТЕГРАЦИИ С VAULT AGENT
+# =============================================================================
+#
+# Создайте Vault Agent template для генерации этого файла:
+#
+# template {
+#   source      = "/opt/monitoring/config/harvest.yml.tpl"
+#   destination = "/opt/monitoring/config/harvest.yml"
+#   perms       = "0640"
+#   command     = "systemctl --user restart harvest"
+# }
+#
+# В harvest.yml.tpl используйте:
+#
+# Pollers:
+#   Netapp-Cluster-01:
+#     addr: {{ with secret "secret/data/monitoring/netapp-api" }}{{ .Data.data.addr }}{{ end }}
+#     username: {{ with secret "secret/data/monitoring/netapp-api" }}{{ .Data.data.user }}{{ end }}
+#     password: {{ with secret "secret/data/monitoring/netapp-api" }}{{ .Data.data.pass }}{{ end }}
+#
+# =============================================================================
+
+# =============================================================================
+# СОЗДАНИЕ READ-ONLY ПОЛЬЗОВАТЕЛЯ В NETAPP
+# =============================================================================
+#
+# Подключитесь к NetApp кластеру:
+#   ssh admin@netapp-cluster.example.com
+#
+# Создайте readonly роль:
+#   security login role create -role harvest-readonly -cmddirname DEFAULT -access readonly
+#
+# Создайте пользователя:
+#   security login create -user-or-group-name harvest -application ontapi -authmethod password -role harvest-readonly
+#   security login create -user-or-group-name harvest -application http -authmethod password -role harvest-readonly
+#
+# Установите пароль:
+#   security login password -username harvest
+#
+# Проверьте:
+#   security login show -user-or-group-name harvest
+#
+# =============================================================================
+

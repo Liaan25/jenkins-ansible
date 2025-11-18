@@ -1,0 +1,235 @@
+---
+# Глобальные переменные для группы monitoring
+# Файл: group_vars/monitoring.yml
+
+# ==============================================================================
+# ОБЩИЕ ПАРАМЕТРЫ
+# ==============================================================================
+
+# Базовая директория для мониторинга
+monitoring_base_dir: "/opt/monitoring"
+
+# Учетные записи
+monitoring_service_user: "monitoring_svc"
+monitoring_admin_user: "monitoring_admin"
+monitoring_ci_user: "monitoring_ci"
+monitoring_ro_user: "monitoring_ro"
+monitoring_group: "monitoring"
+
+# ==============================================================================
+# VAULT / SECMAN ПАРАМЕТРЫ
+# ==============================================================================
+
+# Адрес Vault (SecMan)
+vault_addr: "https://vault.sigma.sbrf.ru"
+vault_namespace: "KPRJ_000000"  # ИЗМЕНИТЬ на ваш namespace
+
+# Пути к KV секретам в Vault (изменить на свои)
+vault_kv_paths:
+  vault_agent: "secret/data/monitoring/vault-agent"
+  rpm_urls: "secret/data/monitoring/rpm-urls"
+  tuz: "secret/data/monitoring/tuz"
+  netapp_ssh: "secret/data/monitoring/netapp-ssh"
+  mon_ssh: "secret/data/monitoring/mon-ssh"
+  netapp_api: "secret/data/monitoring/netapp-api"
+  grafana_web: "secret/data/monitoring/grafana-web"
+  sberca_cert: "pki/issue/monitoring"
+
+# Путь к AppRole credentials (будут получены из Jenkins)
+vault_role_id_file: "/opt/vault/conf/role_id.txt"
+vault_secret_id_file: "/opt/vault/conf/secret_id.txt"
+
+# Директории Vault Agent
+vault_conf_dir: "/opt/vault/conf"
+vault_log_dir: "/opt/vault/log"
+vault_certs_dir: "/opt/vault/certs"
+
+# ==============================================================================
+# RLM ПАРАМЕТРЫ
+# ==============================================================================
+
+# RLM API
+rlm_api_url: "https://rlm.sigma.sbrf.ru"
+# rlm_token будет передан через Jenkins или environment
+
+# ==============================================================================
+# СЕТЕВЫЕ ПАРАМЕТРЫ
+# ==============================================================================
+
+# Порты сервисов
+prometheus_port: 9090
+grafana_port: 3000
+harvest_unix_port: 12991
+harvest_netapp_port: 12990
+
+# Адрес NetApp API (уникален для каждого сервера)
+# Можно переопределить в host_vars или передать через extra-vars
+netapp_api_addr: "netapp-cluster.example.com"
+
+# Email администратора (для сертификатов)
+admin_email: "admin@example.com"
+
+# ==============================================================================
+# ПУТИ К ФАЙЛАМ
+# ==============================================================================
+
+# Структура директорий
+monitoring_dirs:
+  base: "{{ monitoring_base_dir }}"
+  bin: "{{ monitoring_base_dir }}/bin"
+  config: "{{ monitoring_base_dir }}/config"
+  data: "{{ monitoring_base_dir }}/data"
+  logs: "{{ monitoring_base_dir }}/logs"
+  scripts: "{{ monitoring_base_dir }}/scripts"
+  backups: "{{ monitoring_base_dir }}/backups"
+
+# Директория для секретов (tmpfs)
+secrets_dir: "/dev/shm/monitoring_secrets"
+
+# Systemd units (user space)
+systemd_user_dir: "/home/{{ monitoring_service_user }}/.config/systemd/user"
+
+# ==============================================================================
+# RPM ПАКЕТЫ
+# ==============================================================================
+
+# URL RPM пакетов (будут получены из Vault или переданы через extra-vars)
+# prometheus_rpm_url: ""
+# grafana_rpm_url: ""
+# harvest_rpm_url: ""
+
+# ==============================================================================
+# PROMETHEUS ПАРАМЕТРЫ
+# ==============================================================================
+
+prometheus:
+  version: "latest"
+  retention_time: "15d"
+  retention_size: "3GB"
+  scrape_interval: "60s"
+  scrape_timeout: "30s"
+  evaluation_interval: "60s"
+
+# ==============================================================================
+# GRAFANA ПАРАМЕТРЫ
+# ==============================================================================
+
+grafana:
+  version: "latest"
+  protocol: "https"
+  allow_embedding: true
+  # admin_user и admin_password будут получены из Vault
+
+# ==============================================================================
+# HARVEST ПАРАМЕТРЫ
+# ==============================================================================
+
+harvest:
+  version: "latest"
+  poller_name: "{{ netapp_api_addr.split('.')[0] | capitalize }}"
+  use_insecure_tls: false
+
+# ==============================================================================
+# БЕЗОПАСНОСТЬ
+# ==============================================================================
+
+# TLS настройки
+tls:
+  min_version: "TLS12"
+  cipher_suites:
+    - "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256"
+    - "TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256"
+
+# Firewall настройки
+firewall:
+  enabled: true
+  allow_prometheus_from:
+    - "127.0.0.1"
+    - "{{ ansible_default_ipv4.address }}"
+  allow_grafana_from: "0.0.0.0/0"  # Публичный доступ
+  allow_harvest_from: "0.0.0.0/0"  # Публичный доступ
+
+# Права на директории
+directory_permissions:
+  bin: "0750"
+  config: "0750"
+  data: "0770"
+  logs: "0770"
+  scripts: "0755"
+  secrets: "0700"
+
+# Права на файлы
+file_permissions:
+  private_key: "0600"
+  certificate: "0640"
+  config: "0640"
+  script: "0755"
+
+# ==============================================================================
+# ЛОГИРОВАНИЕ И МОНИТОРИНГ
+# ==============================================================================
+
+# Ротация логов
+log_rotation:
+  enabled: true
+  max_size: "100M"
+  max_age: "14d"
+  max_backups: 5
+
+# Мониторинг безопасности
+security_checks:
+  enabled: true
+  verify_permissions: true
+  verify_certificates: true
+  verify_services: true
+
+# ==============================================================================
+# ПЕРЕМЕННЫЕ ОКРУЖЕНИЯ
+# ==============================================================================
+
+# Дополнительные переменные окружения для сервисов
+service_env:
+  PATH: "/opt/monitoring/bin:/usr/local/bin:/usr/bin:/bin"
+  LANG: "en_US.UTF-8"
+  LC_ALL: "en_US.UTF-8"
+
+# ==============================================================================
+# ОПЦИИ РАЗВЕРТЫВАНИЯ
+# ==============================================================================
+
+# Флаги управления развертыванием
+deployment:
+  cleanup_before_install: true
+  backup_before_update: true
+  verify_after_install: true
+  restart_services: true
+  run_security_checks: true
+
+# Таймауты
+timeouts:
+  service_start: 60
+  service_stop: 30
+  vault_agent_wait: 120
+  rlm_task_wait: 300
+
+# ==============================================================================
+# ПРИМЕЧАНИЯ
+# ==============================================================================
+
+# Переменные которые нужно переопределить:
+# - vault_namespace (ваш namespace в Vault)
+# - netapp_api_addr (для каждого сервера)
+# - admin_email (email администратора)
+# - rlm_token (через environment или extra-vars)
+#
+# Переменные которые будут получены из Vault:
+# - prometheus_rpm_url
+# - grafana_rpm_url
+# - harvest_rpm_url
+# - grafana admin credentials
+# - netapp_api credentials
+#
+# Переменные которые будут получены из Jenkins:
+# - vault role_id и secret_id
+# - rlm_token
+

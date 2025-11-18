@@ -1,0 +1,78 @@
+# NetApp Harvest Configuration
+# Автоматически сгенерирован Ansible
+# Управляется: ansible/roles/harvest/templates/harvest.yml.j2
+
+Admin:
+  httpsd:
+    listen: 127.0.0.1:8887
+
+Logging:
+  log_dir: {{ monitoring_dirs.logs }}/harvest
+  loglevel: 1
+  log_max_bytes: 10
+  log_max_files: 10
+
+Exporters:
+  prometheus1:
+    exporter: Prometheus
+    port: {{ harvest_netapp_port }}
+  
+  prometheus_unix:
+    exporter: Prometheus
+    port: {{ harvest_unix_port }}
+    host: 127.0.0.1
+
+Defaults:
+  collectors:
+    - Zapi
+    - ZapiPerf
+    - Ems
+    - Rest
+    - RestPerf
+  
+  poll_schedule:
+    data: 60
+    counter: 1200
+    instance: 600
+  
+  exporters:
+    - prometheus1
+
+Pollers:
+  {{ harvest.poller_name | default(netapp_api_addr.split('.')[0] | capitalize) }}:
+    addr: {{ netapp_api_addr }}
+    # Credentials загружаются из environment или /dev/shm
+    username: ${NETAPP_USER}
+    password: ${NETAPP_PASS}
+    auth_style: password
+    use_insecure_tls: {{ harvest.use_insecure_tls }}
+    
+    collectors:
+      - Zapi
+      - ZapiPerf
+      - Ems
+    
+    exporters:
+      - prometheus1
+    
+    labels:
+      - datacenter: {{ datacenter | default('dc1') }}
+      - environment: {{ environment | default('production') }}
+      - cluster_type: ontap
+  
+  Unix-Metrics:
+    datacenter: Unix
+    
+    collectors:
+      - Unix
+    
+    exporters:
+      - prometheus_unix
+    
+    poll_schedule:
+      data: 30
+    
+    labels:
+      - host: {{ inventory_hostname }}
+      - role: monitoring
+

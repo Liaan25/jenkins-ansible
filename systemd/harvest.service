@@ -1,0 +1,56 @@
+[Unit]
+Description=NetApp Harvest Metrics Collector (User Service)
+Documentation=https://netapp.github.io/harvest/
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+User=monitoring_svc
+Group=monitoring
+
+# Рабочая директория
+WorkingDirectory=/opt/monitoring
+
+# Запуск всех pollers
+ExecStart=/opt/monitoring/bin/harvest start --config /opt/monitoring/config/harvest.yml
+
+# Остановка всех pollers
+ExecStop=/opt/monitoring/bin/harvest stop --config /opt/monitoring/config/harvest.yml
+
+# Перезапуск
+ExecReload=/opt/monitoring/bin/harvest restart --config /opt/monitoring/config/harvest.yml
+
+# Таймауты
+TimeoutStartSec=60s
+TimeoutStopSec=60s
+Restart=on-failure
+RestartSec=15s
+
+# Переменные окружения
+Environment="PATH=/opt/monitoring/bin:/usr/local/bin:/usr/bin:/bin"
+Environment="HARVEST_CONF=/opt/monitoring/config/harvest.yml"
+
+# Ограничения ресурсов
+LimitNOFILE=65536
+LimitNPROC=1024
+
+# Безопасность
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=/opt/monitoring/logs/harvest
+ReadOnlyPaths=/opt/monitoring/bin
+ReadOnlyPaths=/opt/monitoring/config
+ReadOnlyPaths=/dev/shm/monitoring_secrets
+
+# Логирование
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=harvest
+
+[Install]
+WantedBy=default.target
+

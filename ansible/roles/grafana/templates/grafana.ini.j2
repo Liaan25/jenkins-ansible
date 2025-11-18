@@ -1,0 +1,115 @@
+# Grafana Configuration
+# Автоматически сгенерирован Ansible
+# Управляется: ansible/roles/grafana/templates/grafana.ini.j2
+
+[paths]
+data = {{ monitoring_dirs.data }}/grafana
+logs = {{ monitoring_dirs.logs }}/grafana
+plugins = {{ monitoring_base_dir }}/grafana/plugins
+provisioning = {{ monitoring_base_dir }}/grafana/provisioning
+
+[server]
+protocol = {{ grafana.protocol }}
+http_addr = 0.0.0.0
+http_port = {{ grafana_port }}
+domain = {{ ansible_fqdn }}
+root_url = {{ grafana.protocol }}://{{ ansible_fqdn }}:{{ grafana_port }}/
+
+cert_file = {{ secrets_dir }}/server.crt
+cert_key = {{ secrets_dir }}/server.key
+
+tls_min_version = TLS1.2
+tls_cipher_suites = TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384
+
+allow_embedding = {{ grafana.allow_embedding }}
+enable_gzip = true
+
+[database]
+type = sqlite3
+path = {{ monitoring_dirs.data }}/grafana/grafana.db
+max_open_conn = 25
+max_idle_conn = 5
+conn_max_lifetime = 14400
+
+[security]
+admin_user = admin
+# admin_password берется из environment: GF_SECURITY_ADMIN_PASSWORD
+secret_key = __SECRET_KEY_WILL_BE_GENERATED__
+
+disable_initial_admin_creation = false
+allow_embedding = {{ grafana.allow_embedding }}
+cookie_secure = true
+cookie_samesite = lax
+
+strict_transport_security = true
+strict_transport_security_max_age_seconds = 31536000
+strict_transport_security_preload = true
+strict_transport_security_subdomains = true
+
+content_security_policy = true
+content_security_policy_template = """script-src 'self' 'unsafe-eval' 'unsafe-inline' 'strict-dynamic' $NONCE;object-src 'none';font-src 'self';style-src 'self' 'unsafe-inline' blob:;img-src * data:;base-uri 'self';connect-src 'self' grafana.com ws://$ROOT_PATH wss://$ROOT_PATH;manifest-src 'self';media-src 'none';form-action 'self';"""
+
+disable_gravatar = true
+disable_brute_force_login_protection = false
+
+[auth]
+disable_login_form = false
+disable_signout_menu = false
+
+[auth.anonymous]
+enabled = false
+
+[auth.basic]
+enabled = true
+
+[auth.proxy]
+enabled = false
+
+[log]
+mode = console file
+level = info
+
+[log.console]
+level = info
+format = console
+
+[log.file]
+level = info
+format = json
+log_rotate = true
+max_lines = 1000000
+max_size_shift = 28
+daily_rotate = true
+max_days = 7
+
+[users]
+allow_sign_up = false
+allow_org_create = false
+auto_assign_org = true
+auto_assign_org_role = Viewer
+viewers_can_edit = false
+editors_can_admin = false
+
+[panels]
+disable_sanitize_html = false
+
+[plugins]
+allow_loading_unsigned_plugins = false
+
+[alerting]
+enabled = true
+execute_alerts = true
+
+[smtp]
+enabled = false
+
+[metrics]
+enabled = true
+interval_seconds = 10
+
+[snapshots]
+external_enabled = false
+
+[unified_alerting]
+enabled = true
+

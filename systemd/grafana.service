@@ -1,0 +1,60 @@
+[Unit]
+Description=Grafana Visualization Platform (User Service)
+Documentation=https://grafana.com/docs/
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=monitoring_svc
+Group=monitoring
+
+# Рабочая директория
+WorkingDirectory=/opt/monitoring
+
+# Исполняемый файл и аргументы
+ExecStart=/opt/monitoring/bin/grafana-server \
+  --config=/opt/monitoring/config/grafana.ini \
+  --homepath=/opt/monitoring \
+  cfg:default.paths.logs=/opt/monitoring/logs/grafana \
+  cfg:default.paths.data=/opt/monitoring/data/grafana \
+  cfg:default.paths.plugins=/opt/monitoring/data/grafana/plugins \
+  cfg:default.paths.provisioning=/opt/monitoring/config/provisioning
+
+# Graceful shutdown
+ExecReload=/bin/kill -HUP $MAINPID
+KillMode=process
+KillSignal=SIGTERM
+TimeoutStopSec=30s
+Restart=on-failure
+RestartSec=10s
+
+# Переменные окружения
+Environment="PATH=/opt/monitoring/bin:/usr/local/bin:/usr/bin:/bin"
+Environment="GF_PATHS_CONFIG=/opt/monitoring/config/grafana.ini"
+Environment="GF_PATHS_DATA=/opt/monitoring/data/grafana"
+Environment="GF_PATHS_LOGS=/opt/monitoring/logs/grafana"
+
+# Ограничения ресурсов
+LimitNOFILE=10000
+LimitNPROC=512
+
+# Безопасность
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=/opt/monitoring/data/grafana
+ReadWritePaths=/opt/monitoring/logs/grafana
+ReadOnlyPaths=/opt/monitoring/bin
+ReadOnlyPaths=/opt/monitoring/config
+ReadOnlyPaths=/dev/shm/monitoring_secrets
+
+# Логирование
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=grafana
+
+[Install]
+WantedBy=default.target
+

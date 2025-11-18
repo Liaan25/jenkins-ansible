@@ -1,0 +1,367 @@
+# Grafana Configuration Example
+# Безопасная конфигурация Grafana с поддержкой mTLS
+# Файл: /opt/monitoring/config/grafana.ini
+
+# =============================================================================
+# ОСНОВНЫЕ НАСТРОЙКИ
+# =============================================================================
+
+[paths]
+# Пути к данным и файлам
+data = /opt/monitoring/data/grafana
+logs = /opt/monitoring/logs/grafana
+plugins = /opt/monitoring/grafana/plugins
+provisioning = /opt/monitoring/grafana/provisioning
+
+[server]
+# Протокол (https для безопасности)
+protocol = https
+
+# IP адрес для прослушивания (0.0.0.0 для всех интерфейсов)
+http_addr = 0.0.0.0
+
+# Порт
+http_port = 3000
+
+# Доменное имя (замените на ваш домен)
+domain = SERVER_DOMAIN
+
+# Root URL
+root_url = https://SERVER_DOMAIN:3000/
+
+# Сертификаты для TLS
+cert_file = /dev/shm/monitoring_secrets/server.crt
+cert_key = /dev/shm/monitoring_secrets/server.key
+
+# TLS минимальная версия (TLS 1.2 или выше)
+tls_min_version = TLS1.2
+
+# TLS Cipher Suites (только безопасные)
+tls_cipher_suites = TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384
+
+# Разрешить встраивание в iframe (для интеграций)
+allow_embedding = true
+
+# Отключить gzip сжатие (опционально, для совместимости)
+enable_gzip = true
+
+# =============================================================================
+# БАЗА ДАННЫХ
+# =============================================================================
+
+[database]
+# Тип БД (sqlite3 для простоты, postgres/mysql для production)
+type = sqlite3
+
+# Путь к БД (для sqlite3)
+path = /opt/monitoring/data/grafana/grafana.db
+
+# Для PostgreSQL/MySQL (опционально):
+# type = postgres
+# host = postgres-server:5432
+# name = grafana
+# user = grafana
+# password = ${GF_DATABASE_PASSWORD}
+
+# Максимальное количество открытых соединений
+max_open_conn = 25
+
+# Максимальное количество idle соединений
+max_idle_conn = 5
+
+# Время жизни соединения
+conn_max_lifetime = 14400
+
+# =============================================================================
+# БЕЗОПАСНОСТЬ И АУТЕНТИФИКАЦИЯ
+# =============================================================================
+
+[security]
+# Admin пользователь (по умолчанию)
+admin_user = admin
+
+# Admin пароль (ИЗМЕНИТЬ! Или задать через переменную окружения GF_SECURITY_ADMIN_PASSWORD)
+admin_password = CHANGE_ME_PLEASE
+
+# Secret key для подписи cookies (ИЗМЕНИТЬ! Генерировать длинный случайный ключ)
+secret_key = CHANGE_ME_LONG_RANDOM_STRING
+
+# Отключить создание admin пользователя при первом запуске
+disable_initial_admin_creation = false
+
+# Разрешить встраивание через iframe
+allow_embedding = true
+
+# Cookie настройки
+cookie_secure = true
+cookie_samesite = lax
+
+# Строгая политика транспорта (HSTS)
+strict_transport_security = true
+strict_transport_security_max_age_seconds = 31536000
+strict_transport_security_preload = true
+strict_transport_security_subdomains = true
+
+# Content Security Policy
+content_security_policy = true
+content_security_policy_template = """script-src 'self' 'unsafe-eval' 'unsafe-inline' 'strict-dynamic' $NONCE;object-src 'none';font-src 'self';style-src 'self' 'unsafe-inline' blob:;img-src * data:;base-uri 'self';connect-src 'self' grafana.com ws://$ROOT_PATH wss://$ROOT_PATH;manifest-src 'self';media-src 'none';form-action 'self';"""
+
+# Отключить gravatar (внешний сервис)
+disable_gravatar = true
+
+# Отключить brute force защиту (если используется внешняя аутентификация)
+disable_brute_force_login_protection = false
+
+# =============================================================================
+# АУТЕНТИФИКАЦИЯ
+# =============================================================================
+
+[auth]
+# Отключить создание пользователей через UI (безопасность)
+disable_login_form = false
+
+# Отключить регистрацию пользователей
+disable_signout_menu = false
+
+# OAuth настройки (опционально)
+# oauth_auto_login = false
+
+[auth.anonymous]
+# Отключить анонимный доступ
+enabled = false
+
+[auth.basic]
+# Включить базовую аутентификацию
+enabled = true
+
+[auth.proxy]
+# Proxy аутентификация (для интеграции с корпоративными системами)
+enabled = false
+# header_name = X-WEBAUTH-USER
+# header_property = username
+# auto_sign_up = true
+
+# =============================================================================
+# ЛОГИРОВАНИЕ
+# =============================================================================
+
+[log]
+# Режим логирования (console, file, syslog)
+mode = console file
+
+# Уровень логирования (trace, debug, info, warn, error, critical)
+level = info
+
+# Фильтры (опционально, для детального контроля)
+# filters = rendering:debug
+
+[log.console]
+# Формат логов в консоли
+level = info
+format = console
+
+[log.file]
+# Логирование в файл
+level = info
+format = json
+log_rotate = true
+max_lines = 1000000
+max_size_shift = 28
+daily_rotate = true
+max_days = 7
+
+# =============================================================================
+# DATASOURCES (PROMETHEUS)
+# =============================================================================
+
+[datasources]
+# Настройки для автоматического provisioning
+
+# =============================================================================
+# ПОЛЬЗОВАТЕЛИ И ОРГАНИЗАЦИИ
+# =============================================================================
+
+[users]
+# Разрешить регистрацию новых пользователей
+allow_sign_up = false
+
+# Разрешить приглашения пользователей
+allow_org_create = false
+
+# Автоматически назначать организацию новым пользователям
+auto_assign_org = true
+
+# Роль по умолчанию для новых пользователей
+auto_assign_org_role = Viewer
+
+# Разрешить пользователям смотреть список других пользователей
+viewers_can_edit = false
+
+# Разрешить редакторам администрировать дашборды
+editors_can_admin = false
+
+# =============================================================================
+# ПАНЕЛИ И ПЛАГИНЫ
+# =============================================================================
+
+[panels]
+# Отключить санитизацию HTML (опасно! Используйте только если необходимо)
+disable_sanitize_html = false
+
+[plugins]
+# Разрешить загрузку неподписанных плагинов (не рекомендуется)
+allow_loading_unsigned_plugins = false
+
+# Список разрешенных плагинов (если allow_loading_unsigned_plugins = true)
+# plugin_admin_enabled = false
+
+# =============================================================================
+# ALERTING
+# =============================================================================
+
+[alerting]
+# Включить алертинг
+enabled = true
+
+# Интервал выполнения алертов
+execute_alerts = true
+
+# =============================================================================
+# SMTP (для отправки уведомлений, опционально)
+# =============================================================================
+
+[smtp]
+enabled = false
+# host = smtp.example.com:587
+# user = grafana@example.com
+# password = ${GF_SMTP_PASSWORD}
+# cert_file =
+# key_file =
+# skip_verify = false
+# from_address = grafana@example.com
+# from_name = Grafana
+# ehlo_identity =
+
+# =============================================================================
+# METRICS (Prometheus метрики самого Grafana)
+# =============================================================================
+
+[metrics]
+# Включить метрики Grafana
+enabled = true
+
+# Включить basic auth для /metrics endpoint
+basic_auth_username =
+basic_auth_password =
+
+# Интервал flush метрик
+interval_seconds = 10
+
+[metrics.graphite]
+# Отправка метрик в Graphite (опционально)
+# address = graphite.example.com:2003
+# prefix = grafana
+
+# =============================================================================
+# SNAPSHOTS
+# =============================================================================
+
+[snapshots]
+# Внешний snapshot сервер (опционально)
+external_enabled = false
+# external_snapshot_url = https://snapshots.example.com
+# external_snapshot_name = Publish to snapshots.example.com
+
+# Удалять старые snapshots
+# snapshot_remove_expired = true
+
+# =============================================================================
+# ДОПОЛНИТЕЛЬНЫЕ НАСТРОЙКИ БЕЗОПАСНОСТИ
+# =============================================================================
+
+[security.encryption]
+# Алгоритм шифрования для datasource паролей
+# algorithm = aes-gcm
+
+[unified_alerting]
+# Unified alerting (новая система алертинга)
+enabled = true
+
+# =============================================================================
+# FEATURE TOGGLES
+# =============================================================================
+
+[feature_toggles]
+# Включить новые экспериментальные функции
+# enable = feature1,feature2
+
+# =============================================================================
+# ПРИМЕЧАНИЯ ПО БЕЗОПАСНОСТИ
+# =============================================================================
+#
+# 1. ВАЖНО: Изменить следующие параметры:
+#    - admin_password (или задать через GF_SECURITY_ADMIN_PASSWORD)
+#    - secret_key (длинная случайная строка, минимум 32 символа)
+#    - domain и root_url (ваш домен)
+#
+# 2. Сертификаты из /dev/shm:
+#    - Хранятся в tmpfs (RAM), не на диске
+#    - Управляются Vault Agent
+#    - Автоматически обновляются
+#
+# 3. TLS:
+#    - Минимум TLS 1.2
+#    - Только безопасные cipher suites
+#    - HSTS включен
+#
+# 4. Аутентификация:
+#    - Базовая аутентификация включена
+#    - Регистрация новых пользователей отключена
+#    - Можно настроить OAuth/LDAP/SAML
+#
+# 5. Права пользователей:
+#    - Новые пользователи = Viewer (только чтение)
+#    - Editors не могут администрировать
+#    - Анонимный доступ отключен
+#
+# 6. Переменные окружения (альтернатива):
+#    - GF_SECURITY_ADMIN_PASSWORD
+#    - GF_DATABASE_PASSWORD
+#    - GF_SMTP_PASSWORD
+#    - Более безопасно, чем хранить в файле
+#
+# 7. Provisioning:
+#    - Datasources и dashboards можно настроить через provisioning
+#    - Файлы в /opt/monitoring/grafana/provisioning/
+#
+# 8. Логи:
+#    - JSON формат для парсинга
+#    - Ротация каждые 7 дней
+#    - Максимум 1M строк на файл
+#
+# 9. Проверка конфигурации:
+#    - grafana-cli admin reset-admin-password NEW_PASSWORD
+#    - grafana-cli plugins list
+#
+# =============================================================================
+
+# =============================================================================
+# ПЕРЕМЕННЫЕ ОКРУЖЕНИЯ (РЕКОМЕНДУЕТСЯ)
+# =============================================================================
+#
+# Вместо хранения секретов в файле, используйте переменные окружения:
+#
+# export GF_SECURITY_ADMIN_PASSWORD="SuperSecretPassword123"
+# export GF_SECURITY_SECRET_KEY="LongRandomString32CharactersMinimum"
+# export GF_DATABASE_PASSWORD="DatabasePassword"
+#
+# Grafana автоматически прочитает эти переменные при запуске
+#
+# В systemd unit файле:
+# Environment="GF_SECURITY_ADMIN_PASSWORD=value"
+#
+# Или через EnvironmentFile:
+# EnvironmentFile=/dev/shm/monitoring_secrets/grafana.env
+#
+# =============================================================================
+

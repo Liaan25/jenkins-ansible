@@ -1,0 +1,56 @@
+[Unit]
+Description=Vault Agent for Monitoring Secrets (User Service)
+Documentation=https://www.vaultproject.io/docs/agent
+After=network-online.target
+Wants=network-online.target
+Before=prometheus.service grafana.service harvest.service
+
+[Service]
+Type=simple
+User=monitoring_svc
+Group=monitoring
+
+# Рабочая директория
+WorkingDirectory=/opt/vault
+
+# Исполняемый файл
+ExecStart=/usr/bin/vault agent -config=/opt/vault/conf/agent.hcl -log-level=info
+
+# Предварительные проверки
+ExecStartPre=/bin/sh -c 'test -f /opt/vault/conf/role_id.txt || exit 1'
+ExecStartPre=/bin/sh -c 'test -f /opt/vault/conf/secret_id.txt || exit 1'
+ExecStartPre=/bin/sh -c 'mkdir -p /dev/shm/monitoring_secrets && chmod 700 /dev/shm/monitoring_secrets'
+
+# Graceful shutdown
+KillMode=process
+KillSignal=SIGTERM
+TimeoutStopSec=30s
+Restart=on-failure
+RestartSec=30s
+
+# Переменные окружения
+Environment="PATH=/usr/local/bin:/usr/bin:/bin"
+Environment="VAULT_ADDR=https://vault.sigma.sbrf.ru"
+Environment="VAULT_SKIP_VERIFY=false"
+
+# Ограничения ресурсов
+LimitNOFILE=4096
+LimitNPROC=128
+
+# Безопасность
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=/dev/shm/monitoring_secrets
+ReadWritePaths=/opt/vault/log
+ReadOnlyPaths=/opt/vault/conf
+
+# Логирование
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=vault-agent
+
+[Install]
+WantedBy=default.target
+

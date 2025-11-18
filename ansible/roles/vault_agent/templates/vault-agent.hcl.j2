@@ -1,0 +1,131 @@
+# Vault Agent Configuration
+# Автоматически сгенерирован Ansible
+# Управляется: ansible/roles/vault_agent/templates/vault-agent.hcl.j2
+
+pid_file = "{{ monitoring_dirs.logs }}/vault-agent/vault-agent.pid"
+
+vault {
+  address = "{{ vault_addr }}"
+  namespace = "{{ vault_namespace }}"
+  
+  retry {
+    num_retries = 5
+  }
+}
+
+auto_auth {
+  method "approle" {
+    config = {
+      role_id_file_path = "{{ vault_role_id_file }}"
+      secret_id_file_path = "{{ vault_secret_id_file }}"
+      remove_secret_id_file_after_reading = false
+    }
+  }
+  
+  sink "file" {
+    config = {
+      path = "{{ secrets_dir }}/vault-token"
+      mode = 0600
+    }
+  }
+}
+
+cache {
+  use_auto_auth_token = true
+}
+
+listener "tcp" {
+  address = "127.0.0.1:8200"
+  tls_disable = true
+}
+
+# Template: Server certificate and key
+template {
+  contents = <<EOT
+{%raw%}{{ with secret "{{ vault_kv_paths.sberca_cert }}" "common_name={{ ansible_fqdn }}" "alt_names=localhost" "ttl=2160h" }}
+{{ .Data.certificate }}
+{{ range .Data.ca_chain }}{{ . }}{{ end }}
+{{ end }}{%endraw%}
+EOT
+  
+  destination = "{{ secrets_dir }}/server.crt"
+  perms = "0640"
+}
+
+template {
+  contents = <<EOT
+{%raw%}{{ with secret "{{ vault_kv_paths.sberca_cert }}" "common_name={{ ansible_fqdn }}" "alt_names=localhost" "ttl=2160h" }}
+{{ .Data.private_key }}
+{{ end }}{%endraw%}
+EOT
+  
+  destination = "{{ secrets_dir }}/server.key"
+  perms = "0600"
+}
+
+# Template: CA Chain
+template {
+  contents = <<EOT
+{%raw%}{{ with secret "{{ vault_kv_paths.sberca_cert }}" "common_name={{ ansible_fqdn }}" "ttl=2160h" }}
+{{ range .Data.ca_chain }}{{ . }}{{ end }}
+{{ end }}{%endraw%}
+EOT
+  
+  destination = "{{ secrets_dir }}/ca_chain.crt"
+  perms = "0644"
+}
+
+# Template: Grafana client certificate
+template {
+  contents = <<EOT
+{%raw%}{{ with secret "pki/issue/monitoring-client" "common_name=grafana-client" "ttl=2160h" }}
+{{ .Data.certificate }}
+{{ end }}{%endraw%}
+EOT
+  
+  destination = "{{ secrets_dir }}/grafana-client.crt"
+  perms = "0640"
+}
+
+template {
+  contents = <<EOT
+{%raw%}{{ with secret "pki/issue/monitoring-client" "common_name=grafana-client" "ttl=2160h" }}
+{{ .Data.private_key }}
+{{ end }}{%endraw%}
+EOT
+  
+  destination = "{{ secrets_dir }}/grafana-client.key"
+  perms = "0600"
+}
+
+# Template: NetApp API credentials
+template {
+  contents = <<EOT
+{%raw%}{{ with secret "{{ vault_kv_paths.netapp_api }}" }}
+NETAPP_USER={{ .Data.data.user }}
+NETAPP_PASS={{ .Data.data.pass }}
+NETAPP_ADDR={{ .Data.data.addr }}
+{{ end }}{%endraw%}
+EOT
+  
+  destination = "{{ secrets_dir }}/netapp_creds.env"
+  perms = "0600"
+}
+
+# Template: Grafana admin credentials
+template {
+  contents = <<EOT
+{%raw%}{{ with secret "{{ vault_kv_paths.grafana_web }}" }}
+GF_SECURITY_ADMIN_USER={{ .Data.data.user }}
+GF_SECURITY_ADMIN_PASSWORD={{ .Data.data.pass }}
+{{ end }}{%endraw%}
+EOT
+  
+  destination = "{{ secrets_dir }}/grafana_admin.env"
+  perms = "0600"
+}
+
+telemetry {
+  disable_hostname = true
+}
+

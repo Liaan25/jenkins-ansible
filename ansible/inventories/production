@@ -1,0 +1,49 @@
+# Ansible Inventory для Production среды
+# Формат: INI
+
+[monitoring_servers]
+# Укажите IP или FQDN ваших серверов мониторинга
+# Пример:
+# mon-server-01 ansible_host=10.10.10.101
+# mon-server-02 ansible_host=10.10.10.102
+
+# Переменные для группы monitoring_servers
+[monitoring_servers:vars]
+# SSH пользователь (ТУЗ для деплоя)
+ansible_user=monitoring_ci
+ansible_ssh_private_key_file=~/.ssh/id_rsa
+
+# Python интерпретатор
+ansible_python_interpreter=/usr/bin/python3
+
+# Становиться пользователем monitoring_svc для операций
+ansible_become=yes
+ansible_become_method=sudo
+ansible_become_user=monitoring_svc
+
+# Таймауты
+ansible_ssh_timeout=30
+ansible_command_timeout=300
+
+# Пример конфигурации для конкретного сервера:
+# [monitoring_servers]
+# mon-prod-01 ansible_host=172.16.100.10 netapp_api_addr=netapp-cluster-01.example.com
+# mon-prod-02 ansible_host=172.16.100.11 netapp_api_addr=netapp-cluster-02.example.com
+
+# Группы для разных окружений (опционально)
+[development]
+# mon-dev-01 ansible_host=10.10.10.201
+
+[staging]
+# mon-stage-01 ansible_host=10.10.10.301
+
+[production]
+# mon-prod-01 ansible_host=10.10.10.101
+
+# Все серверы мониторинга
+[monitoring:children]
+development
+staging
+production
+monitoring_servers
+

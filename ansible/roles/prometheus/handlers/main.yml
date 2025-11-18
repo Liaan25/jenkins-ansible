@@ -1,0 +1,35 @@
+---
+# Role: prometheus
+# Описание: Handlers для Prometheus
+# Файл: roles/prometheus/handlers/main.yml
+
+- name: reload systemd user
+  systemd:
+    daemon_reload: yes
+    scope: user
+  become: yes
+  become_user: "{{ monitoring_service_user }}"
+  environment:
+    XDG_RUNTIME_DIR: "/run/user/{{ lookup('pipe', 'id -u ' + monitoring_service_user) }}"
+
+- name: reload prometheus
+  systemd:
+    name: prometheus
+    state: reloaded
+    scope: user
+  become: yes
+  become_user: "{{ monitoring_service_user }}"
+  environment:
+    XDG_RUNTIME_DIR: "/run/user/{{ lookup('pipe', 'id -u ' + monitoring_service_user) }}"
+  failed_when: false  # reload может не поддерживаться
+
+- name: restart prometheus
+  systemd:
+    name: prometheus
+    state: restarted
+    scope: user
+  become: yes
+  become_user: "{{ monitoring_service_user }}"
+  environment:
+    XDG_RUNTIME_DIR: "/run/user/{{ lookup('pipe', 'id -u ' + monitoring_service_user) }}"
+

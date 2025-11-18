@@ -1,0 +1,97 @@
+---
+# Role: vault_agent
+# Описание: Настройка Vault Agent для управления секретами
+# Файл: roles/vault_agent/tasks/main.yml
+
+- name: "Vault Agent | Создание директорий для Vault"
+  file:
+    path: "{{ item }}"
+    state: directory
+    owner: "{{ monitoring_service_user }}"
+    group: "{{ monitoring_group }}"
+    mode: "0750"
+  loop:
+    - "{{ vault_conf_dir }}"
+    - "{{ vault_log_dir }}"
+    - "{{ vault_log_dir }}/vault-agent"
+    - "{{ vault_certs_dir }}"
+  become: yes
+  become_user: root
+  tags: [setup]
+
+- name: "Vault Agent | Проверка наличия AppRole credentials"
+  stat:
+    path: "{{ item }}"
+  loop:
+    - "{{ vault_role_id_file }}"
+    - "{{ vault_secret_id_file }}"
+  register: vault_creds
+  tags: [check]
+
+- name: "Vault Agent | Копирование конфигурации"
+  template:
+    src: vault-agent.hcl.j2
+    dest: "{{ vault_conf_dir }}/agent.hcl"
+    owner: "{{ monitoring_service_user }}"
+    group: "{{ monitoring_group }}"
+    mode: "0640"
+  become: yes
+  become_user: root
+  notify: restart vault-agent
+  tags: [config]
+
+- name: "Vault Agent | Копирование systemd unit"
+  copy:
+    src: "{{ playbook_dir }}/../../systemd/vault-agent-monitoring.service"
+    dest: "{{ systemd_user_dir }}/vault-agent-monitoring.service"
+    owner: "{{ monitoring_service_user }}"
+    group: "{{ monitoring_group }}"
+    mode: "0644"
+  become: yes
+  become_user: "{{ monitoring_service_user }}"
+  notify: reload systemd user
+  tags: [systemd]
+
+- name: "Vault Agent | Перезагрузка systemd daemon"
+  systemd:
+    daemon_reload: yes
+    scope: user
+  become: yes
+  become_user: "{{ monitoring_service_user }}"
+  environment:
+    XDG_RUNTIME_DIR: "/run/user/{{ lookup('pipe', 'id -u ' + monitoring_service_user) }}"
+  tags: [systemd]
+
+- name: "Vault Agent | Включение сервиса"
+  systemd:
+    name: vault-agent-monitoring
+    enabled: yes
+    scope: user
+  become: yes
+  become_user: "{{ monitoring_service_user }}"
+  environment:
+    XDG_RUNTIME_DIR: "/run/user/{{ lookup('pipe', 'id -u ' + monitoring_service_user) }}"
+  when: vault_creds.results | selectattr('stat.exists', 'equalto', true) | list | length == 2
+  tags: [service]
+
+- name: "Vault Agent | Запуск сервиса"
+  systemd:
+    name: vault-agent-monitoring
+    state: started
+    scope: user
+  become: yes
+  become_user: "{{ monitoring_service_user }}"
+  environment:
+    XDG_RUNTIME_DIR: "/run/user/{{ lookup('pipe', 'id -u ' + monitoring_service_user) }}"
+  when: 
+    - vault_creds.results | selectattr('stat.exists', 'equalto', true) | list | length == 2
+    - deployment.restart_services | default(true)
+  tags: [service]
+
+- name: "Vault Agent | Ожидание получения секретов"
+  wait_for:
+    path: "{{ secrets_dir }}/server.crt"
+    timeout: "{{ timeouts.vault_agent_wait | default(120) }}"
+  when: vault_creds.results | selectattr('stat.exists', 'equalto', true) | list | length == 2
+  tags: [wait]
+

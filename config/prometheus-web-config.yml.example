@@ -1,0 +1,128 @@
+# Prometheus Web Configuration Example
+# TLS и аутентификация для Prometheus Web UI
+# Файл: /opt/monitoring/config/web-config.yml
+
+tls_server_config:
+  # Путь к сертификату сервера
+  cert_file: /dev/shm/monitoring_secrets/server.crt
+  
+  # Путь к приватному ключу сервера
+  key_file: /dev/shm/monitoring_secrets/server.key
+  
+  # Путь к CA сертификату для проверки клиентов (mTLS)
+  client_ca_file: /dev/shm/monitoring_secrets/ca_chain.crt
+  
+  # Требовать валидный клиентский сертификат (mTLS)
+  client_auth_type: RequireAndVerifyClientCert
+  
+  # Минимальная версия TLS (рекомендуется TLS 1.2 или выше)
+  min_version: TLS12
+  
+  # Максимальная версия TLS
+  max_version: TLS13
+  
+  # Разрешенные cipher suites (только безопасные)
+  cipher_suites:
+    - TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256
+    - TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384
+    - TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256
+    - TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384
+    - TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256
+    - TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256
+  
+  # Предпочитать server cipher suites
+  prefer_server_cipher_suites: true
+  
+  # Кривые для ECDHE
+  curve_preferences:
+    - X25519
+    - CurveP256
+    - CurveP384
+
+# Базовая аутентификация (опционально, дополнительная защита к mTLS)
+# basic_auth_users:
+#   admin: $2y$10$HASHED_PASSWORD_HERE
+#   # Используйте bcrypt для хеширования паролей:
+#   # htpasswd -nBC 10 "" | tr -d ':\n'
+
+# HTTP заголовки безопасности
+http_server_config:
+  http2: true
+  headers:
+    # Strict-Transport-Security (HSTS)
+    Strict-Transport-Security: "max-age=31536000; includeSubDomains"
+    
+    # X-Content-Type-Options
+    X-Content-Type-Options: "nosniff"
+    
+    # X-Frame-Options (защита от clickjacking)
+    X-Frame-Options: "SAMEORIGIN"
+    
+    # Content-Security-Policy
+    Content-Security-Policy: "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'"
+    
+    # Referrer-Policy
+    Referrer-Policy: "strict-origin-when-cross-origin"
+
+# =============================================================================
+# ПРИМЕЧАНИЯ ПО БЕЗОПАСНОСТИ
+# =============================================================================
+#
+# 1. mTLS (Mutual TLS Authentication):
+#    - client_auth_type: RequireAndVerifyClientCert
+#    - Только клиенты с валидным сертификатом смогут подключиться
+#    - Сертификаты должны быть подписаны доверенным CA
+#
+# 2. TLS версии:
+#    - Минимум TLS 1.2 (для совместимости с корпоративными системами)
+#    - Рекомендуется TLS 1.3 для новых клиентов
+#    - TLS 1.0/1.1 запрещены (уязвимы)
+#
+# 3. Cipher Suites:
+#    - Используются только безопасные cipher suites
+#    - Поддержка Forward Secrecy (ECDHE)
+#    - Исключены слабые cipher suites (RC4, DES, 3DES, MD5)
+#
+# 4. Сертификаты из /dev/shm:
+#    - Секреты хранятся в tmpfs (RAM)
+#    - Не сохраняются на диск
+#    - Автоматически удаляются при перезагрузке
+#    - Vault Agent обновляет их при необходимости
+#
+# 5. HTTP Security Headers:
+#    - HSTS: Принудительное использование HTTPS
+#    - X-Content-Type-Options: Защита от MIME sniffing
+#    - X-Frame-Options: Защита от clickjacking
+#    - CSP: Ограничение источников контента
+#
+# 6. Дополнительная защита:
+#    - Можно добавить basic_auth_users для двухфакторной защиты
+#    - Firewall ограничивает доступ на уровне сети
+#    - Сервис работает от непривилегированного пользователя
+#
+# 7. Проверка конфигурации:
+#    - promtool check web-config /opt/monitoring/config/web-config.yml
+#
+# 8. Тестирование mTLS:
+#    - curl --cacert ca.crt --cert client.crt --key client.key https://server:9090/metrics
+#
+# =============================================================================
+
+# =============================================================================
+# ПРИМЕР ГЕНЕРАЦИИ ХЕША ПАРОЛЯ ДЛЯ BASIC AUTH
+# =============================================================================
+#
+# Установите apache2-utils:
+#   yum install httpd-tools
+#
+# Сгенерируйте хеш:
+#   htpasswd -nBC 10 "" | tr -d ':\n'
+#   New password: [введите пароль]
+#   Re-type new password: [повторите пароль]
+#   $2y$10$HASH_WILL_BE_HERE
+#
+# Добавьте в basic_auth_users:
+#   admin: $2y$10$HASH_WILL_BE_HERE
+#
+# =============================================================================
+

@@ -1,0 +1,22 @@
+apiVersion: 1
+
+datasources:
+  - name: Prometheus
+    type: prometheus
+    access: proxy
+    url: https://localhost:9090
+    isDefault: true
+    
+    jsonData:
+      tlsAuth: true
+      tlsAuthWithCACert: true
+      httpMethod: POST
+      timeInterval: 60s
+    
+    secureJsonData:
+      tlsClientCert: $__file{/dev/shm/monitoring_secrets/grafana-client.crt}
+      tlsClientKey: $__file{/dev/shm/monitoring_secrets/grafana-client.key}
+      tlsCACert: $__file{/dev/shm/monitoring_secrets/ca_chain.crt}
+    
+    editable: false
+

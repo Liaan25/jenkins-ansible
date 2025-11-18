@@ -1,0 +1,183 @@
+# Sudoers file for Monitoring System
+# Все команды указаны явно без переменных и звездочек
+# Экранирование выполнено в формате sudoers (например: root\:grafana)
+# 
+# ВАЖНО: Этот файл должен быть размещен в /etc/sudoers.d/monitoring_system
+# После размещения проверить синтаксис: sudo visudo -c -f /etc/sudoers.d/monitoring_system
+#
+# Создание УЗ и запрос прав выполняется через IDM (см. IDM_ACCOUNTS_GUIDE.md)
+#
+
+# ==============================================================================
+# ПРАВА ДЛЯ monitoring_ci (Техническая УЗ для деплоя)
+# ==============================================================================
+
+# Переключение на пользователя monitoring_svc для управления
+monitoring_ci ALL=(monitoring_svc) NOPASSWD: ALL
+
+# Управление user systemd units от имени monitoring_svc
+monitoring_ci ALL=(ALL\:ALL) NOPASSWD: /usr/bin/systemctl --user daemon-reload
+monitoring_ci ALL=(ALL\:ALL) NOPASSWD: /usr/bin/systemctl --user enable prometheus
+monitoring_ci ALL=(ALL\:ALL) NOPASSWD: /usr/bin/systemctl --user enable grafana
+monitoring_ci ALL=(ALL\:ALL) NOPASSWD: /usr/bin/systemctl --user enable harvest
+monitoring_ci ALL=(ALL\:ALL) NOPASSWD: /usr/bin/systemctl --user enable vault-agent-monitoring
+monitoring_ci ALL=(ALL\:ALL) NOPASSWD: /usr/bin/systemctl --user start prometheus
+monitoring_ci ALL=(ALL\:ALL) NOPASSWD: /usr/bin/systemctl --user start grafana
+monitoring_ci ALL=(ALL\:ALL) NOPASSWD: /usr/bin/systemctl --user start harvest
+monitoring_ci ALL=(ALL\:ALL) NOPASSWD: /usr/bin/systemctl --user start vault-agent-monitoring
+monitoring_ci ALL=(ALL\:ALL) NOPASSWD: /usr/bin/systemctl --user stop prometheus
+monitoring_ci ALL=(ALL\:ALL) NOPASSWD: /usr/bin/systemctl --user stop grafana
+monitoring_ci ALL=(ALL\:ALL) NOPASSWD: /usr/bin/systemctl --user stop harvest
+monitoring_ci ALL=(ALL\:ALL) NOPASSWD: /usr/bin/systemctl --user stop vault-agent-monitoring
+monitoring_ci ALL=(ALL\:ALL) NOPASSWD: /usr/bin/systemctl --user restart prometheus
+monitoring_ci ALL=(ALL\:ALL) NOPASSWD: /usr/bin/systemctl --user restart grafana
+monitoring_ci ALL=(ALL\:ALL) NOPASSWD: /usr/bin/systemctl --user restart harvest
+monitoring_ci ALL=(ALL\:ALL) NOPASSWD: /usr/bin/systemctl --user restart vault-agent-monitoring
+monitoring_ci ALL=(ALL\:ALL) NOPASSWD: /usr/bin/systemctl --user status prometheus
+monitoring_ci ALL=(ALL\:ALL) NOPASSWD: /usr/bin/systemctl --user status grafana
+monitoring_ci ALL=(ALL\:ALL) NOPASSWD: /usr/bin/systemctl --user status harvest
+monitoring_ci ALL=(ALL\:ALL) NOPASSWD: /usr/bin/systemctl --user status vault-agent-monitoring
+monitoring_ci ALL=(ALL\:ALL) NOPASSWD: /usr/bin/systemctl --user is-active prometheus
+monitoring_ci ALL=(ALL\:ALL) NOPASSWD: /usr/bin/systemctl --user is-active grafana
+monitoring_ci ALL=(ALL\:ALL) NOPASSWD: /usr/bin/systemctl --user is-active harvest
+monitoring_ci ALL=(ALL\:ALL) NOPASSWD: /usr/bin/systemctl --user is-active vault-agent-monitoring
+monitoring_ci ALL=(ALL\:ALL) NOPASSWD: /usr/bin/systemctl --user is-enabled prometheus
+monitoring_ci ALL=(ALL\:ALL) NOPASSWD: /usr/bin/systemctl --user is-enabled grafana
+monitoring_ci ALL=(ALL\:ALL) NOPASSWD: /usr/bin/systemctl --user is-enabled harvest
+monitoring_ci ALL=(ALL\:ALL) NOPASSWD: /usr/bin/systemctl --user is-enabled vault-agent-monitoring
+
+# Создание директорий для секретов в /dev/shm
+monitoring_ci ALL=(ALL\:ALL) NOPASSWD: /usr/bin/mkdir -p /dev/shm/monitoring_secrets
+monitoring_ci ALL=(ALL\:ALL) NOPASSWD: /usr/bin/chmod 700 /dev/shm/monitoring_secrets
+monitoring_ci ALL=(ALL\:ALL) NOPASSWD: /usr/bin/chown monitoring_svc\:monitoring /dev/shm/monitoring_secrets
+
+# Управление правами на файлы секретов в /dev/shm/monitoring_secrets/
+monitoring_ci ALL=(ALL\:ALL) NOPASSWD: /usr/bin/chmod 600 /dev/shm/monitoring_secrets/server.key
+monitoring_ci ALL=(ALL\:ALL) NOPASSWD: /usr/bin/chmod 600 /dev/shm/monitoring_secrets/client.key
+monitoring_ci ALL=(ALL\:ALL) NOPASSWD: /usr/bin/chmod 600 /dev/shm/monitoring_secrets/grafana-client.key
+monitoring_ci ALL=(ALL\:ALL) NOPASSWD: /usr/bin/chmod 640 /dev/shm/monitoring_secrets/server.crt
+monitoring_ci ALL=(ALL\:ALL) NOPASSWD: /usr/bin/chmod 640 /dev/shm/monitoring_secrets/client.crt
+monitoring_ci ALL=(ALL\:ALL) NOPASSWD: /usr/bin/chmod 640 /dev/shm/monitoring_secrets/grafana-client.crt
+monitoring_ci ALL=(ALL\:ALL) NOPASSWD: /usr/bin/chmod 640 /dev/shm/monitoring_secrets/ca_chain.crt
+monitoring_ci ALL=(ALL\:ALL) NOPASSWD: /usr/bin/chown monitoring_svc\:monitoring /dev/shm/monitoring_secrets/server.key
+monitoring_ci ALL=(ALL\:ALL) NOPASSWD: /usr/bin/chown monitoring_svc\:monitoring /dev/shm/monitoring_secrets/server.crt
+monitoring_ci ALL=(ALL\:ALL) NOPASSWD: /usr/bin/chown monitoring_svc\:monitoring /dev/shm/monitoring_secrets/client.key
+monitoring_ci ALL=(ALL\:ALL) NOPASSWD: /usr/bin/chown monitoring_svc\:monitoring /dev/shm/monitoring_secrets/client.crt
+monitoring_ci ALL=(ALL\:ALL) NOPASSWD: /usr/bin/chown monitoring_svc\:monitoring /dev/shm/monitoring_secrets/grafana-client.key
+monitoring_ci ALL=(ALL\:ALL) NOPASSWD: /usr/bin/chown monitoring_svc\:monitoring /dev/shm/monitoring_secrets/grafana-client.crt
+monitoring_ci ALL=(ALL\:ALL) NOPASSWD: /usr/bin/chown monitoring_svc\:monitoring /dev/shm/monitoring_secrets/ca_chain.crt
+
+# Создание структуры каталогов в /opt/monitoring
+monitoring_ci ALL=(ALL\:ALL) NOPASSWD: /usr/bin/mkdir -p /opt/monitoring/bin
+monitoring_ci ALL=(ALL\:ALL) NOPASSWD: /usr/bin/mkdir -p /opt/monitoring/config
+monitoring_ci ALL=(ALL\:ALL) NOPASSWD: /usr/bin/mkdir -p /opt/monitoring/scripts
+monitoring_ci ALL=(ALL\:ALL) NOPASSWD: /usr/bin/mkdir -p /opt/monitoring/data
+monitoring_ci ALL=(ALL\:ALL) NOPASSWD: /usr/bin/mkdir -p /opt/monitoring/logs
+
+# Управление правами на директории
+monitoring_ci ALL=(ALL\:ALL) NOPASSWD: /usr/bin/chmod 750 /opt/monitoring/bin
+monitoring_ci ALL=(ALL\:ALL) NOPASSWD: /usr/bin/chmod 750 /opt/monitoring/config
+monitoring_ci ALL=(ALL\:ALL) NOPASSWD: /usr/bin/chmod 755 /opt/monitoring/scripts
+monitoring_ci ALL=(ALL\:ALL) NOPASSWD: /usr/bin/chmod 770 /opt/monitoring/data
+monitoring_ci ALL=(ALL\:ALL) NOPASSWD: /usr/bin/chmod 770 /opt/monitoring/logs
+monitoring_ci ALL=(ALL\:ALL) NOPASSWD: /usr/bin/chown -R monitoring_ci\:monitoring /opt/monitoring/bin
+monitoring_ci ALL=(ALL\:ALL) NOPASSWD: /usr/bin/chown -R monitoring_ci\:monitoring /opt/monitoring/config
+monitoring_ci ALL=(ALL\:ALL) NOPASSWD: /usr/bin/chown -R monitoring_ci\:monitoring /opt/monitoring/scripts
+monitoring_ci ALL=(ALL\:ALL) NOPASSWD: /usr/bin/chown -R monitoring_svc\:monitoring /opt/monitoring/data
+monitoring_ci ALL=(ALL\:ALL) NOPASSWD: /usr/bin/chown -R monitoring_svc\:monitoring_admin /opt/monitoring/logs
+
+# Копирование конфигурационных файлов
+monitoring_ci ALL=(ALL\:ALL) NOPASSWD: /usr/bin/cp /home/monitoring_ci/deployment/config/prometheus.yml /opt/monitoring/config/prometheus.yml
+monitoring_ci ALL=(ALL\:ALL) NOPASSWD: /usr/bin/cp /home/monitoring_ci/deployment/config/grafana.ini /opt/monitoring/config/grafana.ini
+monitoring_ci ALL=(ALL\:ALL) NOPASSWD: /usr/bin/cp /home/monitoring_ci/deployment/config/harvest.yml /opt/monitoring/config/harvest.yml
+
+# Просмотр логов для диагностики
+monitoring_ci ALL=(ALL\:ALL) NOPASSWD: /usr/bin/journalctl --user -u prometheus
+monitoring_ci ALL=(ALL\:ALL) NOPASSWD: /usr/bin/journalctl --user -u grafana
+monitoring_ci ALL=(ALL\:ALL) NOPASSWD: /usr/bin/journalctl --user -u harvest
+monitoring_ci ALL=(ALL\:ALL) NOPASSWD: /usr/bin/journalctl --user -u vault-agent-monitoring
+
+# Проверка статуса портов
+monitoring_ci ALL=(ALL\:ALL) NOPASSWD: /usr/bin/ss -tlnp
+monitoring_ci ALL=(ALL\:ALL) NOPASSWD: /usr/sbin/lsof -i TCP\:9090
+monitoring_ci ALL=(ALL\:ALL) NOPASSWD: /usr/sbin/lsof -i TCP\:3000
+monitoring_ci ALL=(ALL\:ALL) NOPASSWD: /usr/sbin/lsof -i TCP\:12990
+monitoring_ci ALL=(ALL\:ALL) NOPASSWD: /usr/sbin/lsof -i TCP\:12991
+
+# ==============================================================================
+# ПРАВА ДЛЯ monitoring_admin (Административная УЗ)
+# ==============================================================================
+
+# Переключение на пользователя monitoring_svc для управления
+monitoring_admin ALL=(monitoring_svc) NOPASSWD: ALL
+
+# Управление user systemd units от имени monitoring_svc
+monitoring_admin ALL=(ALL\:ALL) NOPASSWD: /usr/bin/systemctl --user daemon-reload
+monitoring_admin ALL=(ALL\:ALL) NOPASSWD: /usr/bin/systemctl --user start prometheus
+monitoring_admin ALL=(ALL\:ALL) NOPASSWD: /usr/bin/systemctl --user start grafana
+monitoring_admin ALL=(ALL\:ALL) NOPASSWD: /usr/bin/systemctl --user start harvest
+monitoring_admin ALL=(ALL\:ALL) NOPASSWD: /usr/bin/systemctl --user start vault-agent-monitoring
+monitoring_admin ALL=(ALL\:ALL) NOPASSWD: /usr/bin/systemctl --user stop prometheus
+monitoring_admin ALL=(ALL\:ALL) NOPASSWD: /usr/bin/systemctl --user stop grafana
+monitoring_admin ALL=(ALL\:ALL) NOPASSWD: /usr/bin/systemctl --user stop harvest
+monitoring_admin ALL=(ALL\:ALL) NOPASSWD: /usr/bin/systemctl --user stop vault-agent-monitoring
+monitoring_admin ALL=(ALL\:ALL) NOPASSWD: /usr/bin/systemctl --user restart prometheus
+monitoring_admin ALL=(ALL\:ALL) NOPASSWD: /usr/bin/systemctl --user restart grafana
+monitoring_admin ALL=(ALL\:ALL) NOPASSWD: /usr/bin/systemctl --user restart harvest
+monitoring_admin ALL=(ALL\:ALL) NOPASSWD: /usr/bin/systemctl --user restart vault-agent-monitoring
+monitoring_admin ALL=(ALL\:ALL) NOPASSWD: /usr/bin/systemctl --user status prometheus
+monitoring_admin ALL=(ALL\:ALL) NOPASSWD: /usr/bin/systemctl --user status grafana
+monitoring_admin ALL=(ALL\:ALL) NOPASSWD: /usr/bin/systemctl --user status harvest
+monitoring_admin ALL=(ALL\:ALL) NOPASSWD: /usr/bin/systemctl --user status vault-agent-monitoring
+monitoring_admin ALL=(ALL\:ALL) NOPASSWD: /usr/bin/systemctl --user is-active prometheus
+monitoring_admin ALL=(ALL\:ALL) NOPASSWD: /usr/bin/systemctl --user is-active grafana
+monitoring_admin ALL=(ALL\:ALL) NOPASSWD: /usr/bin/systemctl --user is-active harvest
+monitoring_admin ALL=(ALL\:ALL) NOPASSWD: /usr/bin/systemctl --user is-active vault-agent-monitoring
+
+# Просмотр логов
+monitoring_admin ALL=(ALL\:ALL) NOPASSWD: /usr/bin/journalctl --user -u prometheus
+monitoring_admin ALL=(ALL\:ALL) NOPASSWD: /usr/bin/journalctl --user -u grafana
+monitoring_admin ALL=(ALL\:ALL) NOPASSWD: /usr/bin/journalctl --user -u harvest
+monitoring_admin ALL=(ALL\:ALL) NOPASSWD: /usr/bin/journalctl --user -u vault-agent-monitoring
+
+# Диагностические команды
+monitoring_admin ALL=(ALL\:ALL) NOPASSWD: /usr/bin/ss -tlnp
+monitoring_admin ALL=(ALL\:ALL) NOPASSWD: /usr/sbin/lsof -i TCP\:9090
+monitoring_admin ALL=(ALL\:ALL) NOPASSWD: /usr/sbin/lsof -i TCP\:3000
+monitoring_admin ALL=(ALL\:ALL) NOPASSWD: /usr/sbin/lsof -i TCP\:12990
+monitoring_admin ALL=(ALL\:ALL) NOPASSWD: /usr/sbin/lsof -i TCP\:12991
+monitoring_admin ALL=(ALL\:ALL) NOPASSWD: /usr/bin/ps aux
+monitoring_admin ALL=(ALL\:ALL) NOPASSWD: /usr/bin/df -h
+
+# Создание бэкапов (только чтение исходных файлов)
+monitoring_admin ALL=(ALL\:ALL) NOPASSWD: /usr/bin/tar -czf /opt/monitoring/backups/config_*.tar.gz /opt/monitoring/config/
+
+# ==============================================================================
+# ПРАВА ДЛЯ monitoring_ro (ReadOnly УЗ)
+# ==============================================================================
+
+# Только просмотр статуса и логов (без управления)
+monitoring_ro ALL=(ALL\:ALL) NOPASSWD: /usr/bin/systemctl --user status prometheus
+monitoring_ro ALL=(ALL\:ALL) NOPASSWD: /usr/bin/systemctl --user status grafana
+monitoring_ro ALL=(ALL\:ALL) NOPASSWD: /usr/bin/systemctl --user status harvest
+monitoring_ro ALL=(ALL\:ALL) NOPASSWD: /usr/bin/systemctl --user status vault-agent-monitoring
+monitoring_ro ALL=(ALL\:ALL) NOPASSWD: /usr/bin/systemctl --user is-active prometheus
+monitoring_ro ALL=(ALL\:ALL) NOPASSWD: /usr/bin/systemctl --user is-active grafana
+monitoring_ro ALL=(ALL\:ALL) NOPASSWD: /usr/bin/systemctl --user is-active harvest
+monitoring_ro ALL=(ALL\:ALL) NOPASSWD: /usr/bin/systemctl --user is-active vault-agent-monitoring
+
+# Просмотр логов
+monitoring_ro ALL=(ALL\:ALL) NOPASSWD: /usr/bin/journalctl --user -u prometheus
+monitoring_ro ALL=(ALL\:ALL) NOPASSWD: /usr/bin/journalctl --user -u grafana
+monitoring_ro ALL=(ALL\:ALL) NOPASSWD: /usr/bin/journalctl --user -u harvest
+monitoring_ro ALL=(ALL\:ALL) NOPASSWD: /usr/bin/journalctl --user -u vault-agent-monitoring
+
+# Диагностика (только просмотр)
+monitoring_ro ALL=(ALL\:ALL) NOPASSWD: /usr/bin/ss -tlnp
+monitoring_ro ALL=(ALL\:ALL) NOPASSWD: /usr/bin/ps aux
+monitoring_ro ALL=(ALL\:ALL) NOPASSWD: /usr/bin/df -h
+
+# ==============================================================================
+# КОНЕЦ ФАЙЛА
+# ==============================================================================
+

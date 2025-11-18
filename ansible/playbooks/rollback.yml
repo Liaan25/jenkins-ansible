@@ -1,0 +1,60 @@
+---
+# Rollback Playbook
+# Откат к предыдущей конфигурации
+
+- name: "Откат конфигурации"
+  hosts: monitoring_servers
+  gather_facts: no
+  become: yes
+  tags: [rollback]
+  
+  vars:
+    backup_dir: "{{ monitoring_dirs.backups }}"
+  
+  tasks:
+    - name: "Rollback | Поиск последнего backup"
+      find:
+        paths: "{{ backup_dir }}"
+        patterns: "config_backup_*.tar.gz"
+        age: "-1d"
+      register: backups
+      tags: [find]
+    
+    - name: "Rollback | Остановка сервисов"
+      systemd:
+        name: "{{ item }}"
+        state: stopped
+        scope: user
+      loop:
+        - prometheus
+        - grafana
+        - harvest
+      become_user: "{{ monitoring_service_user }}"
+      environment:
+        XDG_RUNTIME_DIR: "/run/user/{{ lookup('pipe', 'id -u ' + monitoring_service_user) }}"
+      when: backups.files | length > 0
+      tags: [stop]
+    
+    - name: "Rollback | Восстановление конфигураций"
+      unarchive:
+        src: "{{ backups.files | sort(attribute='mtime') | last | map(attribute='path') | first }}"
+        dest: "{{ monitoring_dirs.config }}"
+        remote_src: yes
+      when: backups.files | length > 0
+      tags: [restore]
+    
+    - name: "Rollback | Запуск сервисов"
+      systemd:
+        name: "{{ item }}"
+        state: started
+        scope: user
+      loop:
+        - prometheus
+        - grafana
+        - harvest
+      become_user: "{{ monitoring_service_user }}"
+      environment:
+        XDG_RUNTIME_DIR: "/run/user/{{ lookup('pipe', 'id -u ' + monitoring_service_user) }}"
+      when: backups.files | length > 0
+      tags: [start]
+
