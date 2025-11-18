@@ -141,6 +141,11 @@ pipeline {
             defaultValue: true,
             description: 'Очистить секреты после развертывания'
         )
+        booleanParam(
+            name: 'DEBUG',
+            defaultValue: false,
+            description: 'Включить детальный debug вывод (WARNING: может показывать чувствительные данные в логах!)'
+        )
     }
     
     environment {
@@ -163,6 +168,17 @@ pipeline {
         stage('Валидация параметров') {
             steps {
                 script {
+                    // WARNING для DEBUG режима
+                    if (params.DEBUG) {
+                        echo """
+                        ⚠️  ⚠️  ⚠️  WARNING  ⚠️  ⚠️  ⚠️
+                        DEBUG РЕЖИМ ВКЛЮЧЕН!
+                        Логи могут содержать чувствительные данные!
+                        Убедитесь что логи pipeline защищены!
+                        ⚠️  ⚠️  ⚠️  WARNING  ⚠️  ⚠️  ⚠️
+                        """
+                    }
+                    
                     echo """
                     ================================================
                     ВАЛИДАЦИЯ ПАРАМЕТРОВ
@@ -171,6 +187,7 @@ pipeline {
                     Namespace: ${params.NAMESPACE_CI}
                     NetApp кластер: ${params.NETAPP_API_ADDR}
                     Метод развертывания: ${params.DEPLOYMENT_METHOD}
+                    DEBUG режим: ${params.DEBUG}
                     ================================================
                     """
                     
@@ -263,17 +280,44 @@ pipeline {
                             ]
                         ]
                         
+                        // DEBUG: Вывод информации о секретах (без plain text)
+                        if (params.DEBUG) {
+                            echo "DEBUG: Содержимое secretsData:"
+                            echo "  - role_id length: ${secretsData['vault-agent'].role_id?.length() ?: 0}"
+                            echo "  - secret_id length: ${secretsData['vault-agent'].secret_id?.length() ?: 0}"
+                            echo "  - harvest_rpm_url: ${secretsData['rpm_url'].harvest ? 'SET' : 'EMPTY'}"
+                            echo "  - prometheus_rpm_url: ${secretsData['rpm_url'].prometheus ? 'SET' : 'EMPTY'}"
+                            echo "  - grafana_rpm_url: ${secretsData['rpm_url'].grafana ? 'SET' : 'EMPTY'}"
+                            echo "  - grafana_user: ${secretsData['grafana_web'].user ? 'SET' : 'EMPTY'}"
+                            echo "  - grafana_pass length: ${secretsData['grafana_web'].pass?.length() ?: 0}"
+                            echo "  - netapp_user: ${secretsData['netapp_api'].user ? 'SET' : 'EMPTY'}"
+                            echo "  - netapp_pass length: ${secretsData['netapp_api'].pass?.length() ?: 0}"
+                        }
+                        
+                        // Проверка что все критичные поля заполнены
+                        def missingSecrets = []
+                        if (!secretsData['vault-agent'].role_id) missingSecrets.add('role_id')
+                        if (!secretsData['vault-agent'].secret_id) missingSecrets.add('secret_id')
+                        
+                        if (missingSecrets.size() > 0) {
+                            error("ОШИБКА: Не получены критичные секреты из Vault: ${missingSecrets.join(', ')}")
+                        }
+                        
                         // Сохранение в временный файл (будет удален после использования)
                         writeFile file: "${WORKSPACE_LOCAL}/secrets.json", 
                                   text: groovy.json.JsonOutput.toJson(secretsData)
                         
+                        // Проверка что файл создан (ВНУТРИ withVault блока)
+                        def secretsFile = new File("${WORKSPACE_LOCAL}/secrets.json")
+                        if (!secretsFile.exists() || secretsFile.length() == 0) {
+                            error("ОШИБКА: Файл secrets.json не создан или пустой")
+                        }
+                        
+                        if (params.DEBUG) {
+                            echo "DEBUG: Файл secrets.json создан, размер: ${secretsFile.length()} байт"
+                        }
+                        
                         echo "✓ Секреты получены из Vault"
-                    }
-                    
-                    // Проверка что файл создан
-                    def secretsFile = new File("${WORKSPACE_LOCAL}/secrets.json")
-                    if (!secretsFile.exists() || secretsFile.length() == 0) {
-                        error("ОШИБКА: Не удалось получить секреты из Vault")
                     }
                 }
             }
@@ -338,26 +382,47 @@ vault_namespace=${params.NAMESPACE_CI}
                         ),
                         string(credentialsId: 'rlm-token', variable: 'RLM_TOKEN')
                     ]) {
+                        // DEBUG: Проверка локального файла secrets.json
+                        if (params.DEBUG) {
+                            echo "DEBUG: Проверка локального файла secrets.json..."
+                            sh "ls -lh ${WORKSPACE_LOCAL}/secrets.json || echo 'FILE NOT FOUND'"
+                            sh "wc -l ${WORKSPACE_LOCAL}/secrets.json || echo 'CANNOT COUNT LINES'"
+                        }
+                        
                         // Скрипт для безопасной передачи секретов
                         writeFile file: 'transfer_secrets.sh', text: """#!/bin/bash
 set -euo pipefail
 
+${params.DEBUG ? 'set -x' : ''}
+
 echo "[INFO] Создание директории для секретов в /dev/shm..."
 ssh -i "\${SSH_KEY}" -o StrictHostKeyChecking=no "\${SSH_USER}@${params.SERVER_ADDRESS}" \\
     "sudo mkdir -p ${REMOTE_SECRETS_DIR} && sudo chmod 700 ${REMOTE_SECRETS_DIR} && sudo chown monitoring_svc:monitoring ${REMOTE_SECRETS_DIR}"
+
+${params.DEBUG ? 'echo "[DEBUG] Локальный файл secrets.json:"' : ''}
+${params.DEBUG ? "ls -lh ${WORKSPACE_LOCAL}/secrets.json" : ''}
 
 echo "[INFO] Передача секретов через SCP..."
 scp -i "\${SSH_KEY}" -o StrictHostKeyChecking=no \\
     ${WORKSPACE_LOCAL}/secrets.json \\
     "\${SSH_USER}@${params.SERVER_ADDRESS}:${REMOTE_SECRETS_DIR}/secrets.json"
 
+${params.DEBUG ? 'echo "[DEBUG] Удаленный файл secrets.json после копирования:"' : ''}
+${params.DEBUG ? "ssh -i \"\${SSH_KEY}\" -o StrictHostKeyChecking=no \"\${SSH_USER}@${params.SERVER_ADDRESS}\" \"ls -lh ${REMOTE_SECRETS_DIR}/secrets.json\"" : ''}
+
 echo "[INFO] Установка прав на файл секретов..."
 ssh -i "\${SSH_KEY}" -o StrictHostKeyChecking=no "\${SSH_USER}@${params.SERVER_ADDRESS}" \\
     "sudo chown monitoring_svc:monitoring ${REMOTE_SECRETS_DIR}/secrets.json && sudo chmod 600 ${REMOTE_SECRETS_DIR}/secrets.json"
 
+${params.DEBUG ? 'echo "[DEBUG] Права на secrets.json:"' : ''}
+${params.DEBUG ? "ssh -i \"\${SSH_KEY}\" -o StrictHostKeyChecking=no \"\${SSH_USER}@${params.SERVER_ADDRESS}\" \"sudo ls -lh ${REMOTE_SECRETS_DIR}/secrets.json\"" : ''}
+
 echo "[INFO] Распаковка секретов в отдельные файлы..."
 ssh -i "\${SSH_KEY}" -o StrictHostKeyChecking=no "\${SSH_USER}@${params.SERVER_ADDRESS}" \\
     "sudo -u monitoring_svc bash -c 'cd ${REMOTE_SECRETS_DIR} && jq -r \".\\\"vault-agent\\\".role_id\" secrets.json > role_id.txt && jq -r \".\\\"vault-agent\\\".secret_id\" secrets.json > secret_id.txt && chmod 600 role_id.txt secret_id.txt'"
+
+${params.DEBUG ? 'echo "[DEBUG] Созданные файлы секретов:"' : ''}
+${params.DEBUG ? "ssh -i \"\${SSH_KEY}\" -o StrictHostKeyChecking=no \"\${SSH_USER}@${params.SERVER_ADDRESS}\" \"sudo ls -lh ${REMOTE_SECRETS_DIR}/\"" : ''}
 
 echo "[SUCCESS] Секреты успешно переданы и размещены в ${REMOTE_SECRETS_DIR}"
                         """
@@ -394,14 +459,14 @@ echo "[SUCCESS] Секреты успешно переданы и размеще
                         )
                     ]) {
                         dir('ansible_project/secure_deployment/ansible') {
-                            // Запуск Ansible playbook
+                            // Запуск Ansible playbook с поддержкой DEBUG режима
                             sh """
                                 ansible-playbook \\
                                     -i inventories/dynamic_inventory \\
                                     playbooks/deploy_monitoring.yml \\
                                     --extra-vars "rlm_token=${RLM_TOKEN}" \\
                                     --private-key=\${SSH_KEY} \\
-                                    -v
+                                    ${params.DEBUG ? '-vvv' : '-v'}
                             """
                         }
                         
@@ -433,6 +498,15 @@ echo "[SUCCESS] Секреты успешно переданы и размеще
                             usernameVariable: 'SSH_USER'
                         )
                     ]) {
+                        // DEBUG: Проверка файлов перед security check
+                        if (params.DEBUG) {
+                            echo "DEBUG: Проверка файлов на удаленном сервере перед security check..."
+                            sh """
+                                ssh -i "\${SSH_KEY}" -o StrictHostKeyChecking=no "\${SSH_USER}@${params.SERVER_ADDRESS}" \\
+                                    'ls -laR /opt/monitoring/ 2>/dev/null | head -50 || echo "Cannot list /opt/monitoring"'
+                            """
+                        }
+                        
                         def securityCheckResult = sh(
                             script: """
                                 ssh -i "\${SSH_KEY}" -o StrictHostKeyChecking=no "\${SSH_USER}@${params.SERVER_ADDRESS}" \\
@@ -539,6 +613,16 @@ EOF
     post {
         success {
             script {
+                if (params.DEBUG) {
+                    echo """
+                    DEBUG INFO:
+                      - Workspace: ${WORKSPACE}
+                      - Build Number: ${BUILD_NUMBER}
+                      - Build URL: ${BUILD_URL}
+                      - Deployment Method: ${params.DEPLOYMENT_METHOD}
+                    """
+                }
+                
                 def serverDomain = sh(
                     script: """ssh -i "\${SSH_KEY}" -o StrictHostKeyChecking=no "\${SSH_USER}@${params.SERVER_ADDRESS}" 'hostname -f' || echo '${params.SERVER_ADDRESS}'""",
                     returnStdout: true
@@ -563,14 +647,26 @@ EOF
         }
         
         failure {
-            echo """
-            ================================================
-            ❌ РАЗВЕРТЫВАНИЕ ЗАВЕРШИЛОСЬ С ОШИБКОЙ!
-            ================================================
-            Проверьте логи для диагностики проблемы
-            Время выполнения: ${currentBuild.durationString}
-            ================================================
-            """
+            script {
+                if (params.DEBUG) {
+                    echo """
+                    DEBUG: Failure Details
+                      - Stage: ${env.STAGE_NAME}
+                      - Workspace files:
+                    """
+                    sh "ls -la ${WORKSPACE} || true"
+                    sh "cat ${WORKSPACE}/secrets.json 2>/dev/null | jq -r 'keys' || echo 'No secrets.json'"
+                }
+                
+                echo """
+                ================================================
+                ❌ РАЗВЕРТЫВАНИЕ ЗАВЕРШИЛОСЬ С ОШИБКОЙ!
+                ================================================
+                Проверьте логи для диагностики проблемы
+                Время выполнения: ${currentBuild.durationString}
+                ================================================
+                """
+            }
         }
         
         always {
