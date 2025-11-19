@@ -473,7 +473,7 @@ ${params.DEBUG ? 'set -x' : ''}
 
 echo "[INFO] Создание директории для секретов в /dev/shm..."
 ssh -i "\${SSH_KEY}" -o StrictHostKeyChecking=no "\${SSH_USER}@${params.SERVER_ADDRESS}" \\
-    "sudo mkdir -p ${REMOTE_SECRETS_DIR} && sudo chmod 700 ${REMOTE_SECRETS_DIR} && sudo chown ${env.USER_SYS}:${env.USER_SYS} ${REMOTE_SECRETS_DIR}"
+    "sudo mkdir -p ${REMOTE_SECRETS_DIR} && sudo chmod 770 ${REMOTE_SECRETS_DIR} && sudo chown ${env.USER_CI}:${env.USER_SYS} ${REMOTE_SECRETS_DIR}"
 
 ${params.DEBUG ? 'echo "[DEBUG] Локальный файл secrets.json:"' : ''}
 ${params.DEBUG ? "ls -lh ${WORKSPACE_LOCAL}/secrets.json" : ''}
@@ -486,9 +486,9 @@ scp -i "\${SSH_KEY}" -o StrictHostKeyChecking=no \\
 ${params.DEBUG ? 'echo "[DEBUG] Удаленный файл secrets.json после копирования:"' : ''}
 ${params.DEBUG ? "ssh -i \"\${SSH_KEY}\" -o StrictHostKeyChecking=no \"\${SSH_USER}@${params.SERVER_ADDRESS}\" \"ls -lh ${REMOTE_SECRETS_DIR}/secrets.json\"" : ''}
 
-echo "[INFO] Установка прав на файл секретов..."
+echo "[INFO] Установка финальных прав на директорию и файл секретов..."
 ssh -i "\${SSH_KEY}" -o StrictHostKeyChecking=no "\${SSH_USER}@${params.SERVER_ADDRESS}" \\
-    "sudo chown ${env.USER_SYS}:${env.USER_SYS} ${REMOTE_SECRETS_DIR}/secrets.json && sudo chmod 600 ${REMOTE_SECRETS_DIR}/secrets.json"
+    "sudo chown -R ${env.USER_SYS}:${env.USER_SYS} ${REMOTE_SECRETS_DIR} && sudo chmod 700 ${REMOTE_SECRETS_DIR} && sudo chmod 600 ${REMOTE_SECRETS_DIR}/secrets.json"
 
 ${params.DEBUG ? 'echo "[DEBUG] Права на secrets.json:"' : ''}
 ${params.DEBUG ? "ssh -i \"\${SSH_KEY}\" -o StrictHostKeyChecking=no \"\${SSH_USER}@${params.SERVER_ADDRESS}\" \"sudo ls -lh ${REMOTE_SECRETS_DIR}/secrets.json\"" : ''}
