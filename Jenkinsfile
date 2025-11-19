@@ -755,21 +755,21 @@ echo "========================================================================"
 echo ""
 """ : ''}
 
-echo "[INFO] Создание директории для секретов в /dev/shm (через двухуровневый sudo)..."
+echo "[INFO] Создание директории для секретов в /dev/shm (через sudo -u SYS_USER)..."
 ssh -i "\${SSH_KEY}" -o StrictHostKeyChecking=no "\${SSH_USER}@${params.SERVER_ADDRESS}" \\
-    "sudo -u ${env.USER_CI} sudo -u ${env.USER_SYS} -g ${env.USER_SYS} mkdir -p ${REMOTE_SECRETS_DIR}"
+    "sudo -u ${env.USER_SYS} -g ${env.USER_SYS} mkdir -p ${REMOTE_SECRETS_DIR}"
 ssh -i "\${SSH_KEY}" -o StrictHostKeyChecking=no "\${SSH_USER}@${params.SERVER_ADDRESS}" \\
-    "sudo -u ${env.USER_CI} sudo -u ${env.USER_SYS} -g ${env.USER_SYS} chmod 770 ${REMOTE_SECRETS_DIR}"
+    "sudo -u ${env.USER_SYS} -g ${env.USER_SYS} chmod 770 ${REMOTE_SECRETS_DIR}"
 ssh -i "\${SSH_KEY}" -o StrictHostKeyChecking=no "\${SSH_USER}@${params.SERVER_ADDRESS}" \\
-    "sudo -u ${env.USER_CI} sudo -u ${env.USER_SYS} -g ${env.USER_SYS} chown ${env.USER_CI}:${env.USER_SYS} ${REMOTE_SECRETS_DIR}"
+    "sudo -u ${env.USER_SYS} -g ${env.USER_SYS} chown ${env.USER_CI}:${env.USER_SYS} ${REMOTE_SECRETS_DIR}"
 
 ${params.DEBUG ? """
 echo "[DEBUG] После создания директории:"
 ssh -i "\${SSH_KEY}" -o StrictHostKeyChecking=no "\${SSH_USER}@${params.SERVER_ADDRESS}" << 'DEBUG_EOF2'
 echo "  - Права на директорию:"
-sudo -u ${env.USER_CI} sudo -u ${env.USER_SYS} -g ${env.USER_SYS} ls -lad ${REMOTE_SECRETS_DIR}
+sudo -u ${env.USER_SYS} -g ${env.USER_SYS} ls -lad ${REMOTE_SECRETS_DIR}
 echo "  - Владелец директории:"
-sudo -u ${env.USER_CI} sudo -u ${env.USER_SYS} -g ${env.USER_SYS} stat -c "Owner: %U:%G (uid=%u gid=%g)" ${REMOTE_SECRETS_DIR}
+sudo -u ${env.USER_SYS} -g ${env.USER_SYS} stat -c "Owner: %U:%G (uid=%u gid=%g)" ${REMOTE_SECRETS_DIR}
 DEBUG_EOF2
 echo ""
 """ : ''}
@@ -777,50 +777,50 @@ echo ""
 ${params.DEBUG ? 'echo "[DEBUG] Локальный файл secrets.json:"' : ''}
 ${params.DEBUG ? "ls -lh ${WORKSPACE_LOCAL}/secrets.json" : ''}
 
-echo "[INFO] Передача секретов через SSH pipe (через двухуровневый sudo)..."
+echo "[INFO] Передача секретов через SSH pipe (через sudo -u SYS_USER)..."
 ${params.DEBUG ? """
-echo "[DEBUG] Перед передачей файла:"
+echo "[DEBUG] Проверка sudo прав:"
 ssh -i "\${SSH_KEY}" -o StrictHostKeyChecking=no "\${SSH_USER}@${params.SERVER_ADDRESS}" << 'DEBUG_EOF3'
-echo "  - Проверка двухуровневого sudo:"
-sudo -u ${env.USER_CI} sudo -u ${env.USER_SYS} -g ${env.USER_SYS} whoami 2>&1 || echo "  FAILED: двухуровневый sudo не работает"
-sudo -u ${env.USER_CI} sudo -u ${env.USER_SYS} -g ${env.USER_SYS} id 2>&1 || echo "  FAILED: не удалось получить id"
+echo "  - Проверка sudo -u SYS_USER:"
+sudo -u ${env.USER_SYS} -g ${env.USER_SYS} whoami 2>&1 || echo "  FAILED: sudo не работает"
+sudo -u ${env.USER_SYS} -g ${env.USER_SYS} id 2>&1 || echo "  FAILED: не удалось получить id"
 DEBUG_EOF3
 echo ""
 """ : ''}
 
 cat ${WORKSPACE_LOCAL}/secrets.json | ssh -i "\${SSH_KEY}" -o StrictHostKeyChecking=no "\${SSH_USER}@${params.SERVER_ADDRESS}" \\
-    "sudo -u ${env.USER_CI} sudo -u ${env.USER_SYS} -g ${env.USER_SYS} bash -c 'cat > ${REMOTE_SECRETS_DIR}/secrets.json'"
+    "sudo -u ${env.USER_SYS} -g ${env.USER_SYS} bash -c 'cat > ${REMOTE_SECRETS_DIR}/secrets.json'"
 
 ${params.DEBUG ? 'echo "[DEBUG] Удаленный файл secrets.json после копирования:"' : ''}
 ${params.DEBUG ? """
 ssh -i "\${SSH_KEY}" -o StrictHostKeyChecking=no "\${SSH_USER}@${params.SERVER_ADDRESS}" << 'DEBUG_EOF4'
 echo "  - Существование файла:"
-sudo -u ${env.USER_CI} sudo -u ${env.USER_SYS} -g ${env.USER_SYS} ls -lh ${REMOTE_SECRETS_DIR}/secrets.json 2>&1 || echo "  Файл НЕ создан!"
+sudo -u ${env.USER_SYS} -g ${env.USER_SYS} ls -lh ${REMOTE_SECRETS_DIR}/secrets.json 2>&1 || echo "  Файл НЕ создан!"
 echo "  - Размер файла:"
-sudo -u ${env.USER_CI} sudo -u ${env.USER_SYS} -g ${env.USER_SYS} du -h ${REMOTE_SECRETS_DIR}/secrets.json 2>&1 || echo "  Не удалось проверить размер"
+sudo -u ${env.USER_SYS} -g ${env.USER_SYS} du -h ${REMOTE_SECRETS_DIR}/secrets.json 2>&1 || echo "  Не удалось проверить размер"
 echo "  - Владелец файла:"
-sudo -u ${env.USER_CI} sudo -u ${env.USER_SYS} -g ${env.USER_SYS} stat -c "Owner: %U:%G" ${REMOTE_SECRETS_DIR}/secrets.json 2>&1 || echo "  Не удалось проверить владельца"
+sudo -u ${env.USER_SYS} -g ${env.USER_SYS} stat -c "Owner: %U:%G" ${REMOTE_SECRETS_DIR}/secrets.json 2>&1 || echo "  Не удалось проверить владельца"
 DEBUG_EOF4
 echo ""
 """ : ''}
 
 echo "[INFO] Установка финальных прав на директорию и файл секретов..."
 ssh -i "\${SSH_KEY}" -o StrictHostKeyChecking=no "\${SSH_USER}@${params.SERVER_ADDRESS}" \\
-    "sudo -u ${env.USER_CI} sudo -u ${env.USER_SYS} -g ${env.USER_SYS} chown -R ${env.USER_SYS}:${env.USER_SYS} ${REMOTE_SECRETS_DIR}"
+    "sudo -u ${env.USER_SYS} -g ${env.USER_SYS} chown -R ${env.USER_SYS}:${env.USER_SYS} ${REMOTE_SECRETS_DIR}"
 ssh -i "\${SSH_KEY}" -o StrictHostKeyChecking=no "\${SSH_USER}@${params.SERVER_ADDRESS}" \\
-    "sudo -u ${env.USER_CI} sudo -u ${env.USER_SYS} -g ${env.USER_SYS} chmod 700 ${REMOTE_SECRETS_DIR}"
+    "sudo -u ${env.USER_SYS} -g ${env.USER_SYS} chmod 700 ${REMOTE_SECRETS_DIR}"
 ssh -i "\${SSH_KEY}" -o StrictHostKeyChecking=no "\${SSH_USER}@${params.SERVER_ADDRESS}" \\
-    "sudo -u ${env.USER_CI} sudo -u ${env.USER_SYS} -g ${env.USER_SYS} chmod 600 ${REMOTE_SECRETS_DIR}/secrets.json"
+    "sudo -u ${env.USER_SYS} -g ${env.USER_SYS} chmod 600 ${REMOTE_SECRETS_DIR}/secrets.json"
 
 ${params.DEBUG ? 'echo "[DEBUG] Права на secrets.json:"' : ''}
-${params.DEBUG ? "ssh -i \"\${SSH_KEY}\" -o StrictHostKeyChecking=no \"\${SSH_USER}@${params.SERVER_ADDRESS}\" \"sudo -u ${env.USER_CI} sudo -u ${env.USER_SYS} -g ${env.USER_SYS} ls -lh ${REMOTE_SECRETS_DIR}/secrets.json\"" : ''}
+${params.DEBUG ? "ssh -i \"\${SSH_KEY}\" -o StrictHostKeyChecking=no \"\${SSH_USER}@${params.SERVER_ADDRESS}\" \"sudo -u ${env.USER_SYS} -g ${env.USER_SYS} ls -lh ${REMOTE_SECRETS_DIR}/secrets.json\"" : ''}
 
-echo "[INFO] Распаковка секретов в отдельные файлы (через двухуровневый sudo)..."
+echo "[INFO] Распаковка секретов в отдельные файлы (через sudo -u SYS_USER)..."
 ssh -i "\${SSH_KEY}" -o StrictHostKeyChecking=no "\${SSH_USER}@${params.SERVER_ADDRESS}" \\
-    "sudo -u ${env.USER_CI} sudo -u ${env.USER_SYS} -g ${env.USER_SYS} bash -c 'cd ${REMOTE_SECRETS_DIR} && jq -r \".\\\"vault-agent\\\".role_id\" secrets.json > role_id.txt && jq -r \".\\\"vault-agent\\\".secret_id\" secrets.json > secret_id.txt && chmod 600 role_id.txt secret_id.txt'"
+    "sudo -u ${env.USER_SYS} -g ${env.USER_SYS} bash -c 'cd ${REMOTE_SECRETS_DIR} && jq -r \".\\\"vault-agent\\\".role_id\" secrets.json > role_id.txt && jq -r \".\\\"vault-agent\\\".secret_id\" secrets.json > secret_id.txt && chmod 600 role_id.txt secret_id.txt'"
 
 ${params.DEBUG ? 'echo "[DEBUG] Созданные файлы секретов:"' : ''}
-${params.DEBUG ? "ssh -i \"\${SSH_KEY}\" -o StrictHostKeyChecking=no \"\${SSH_USER}@${params.SERVER_ADDRESS}\" \"sudo -u ${env.USER_CI} sudo -u ${env.USER_SYS} -g ${env.USER_SYS} ls -lh ${REMOTE_SECRETS_DIR}/\"" : ''}
+${params.DEBUG ? "ssh -i \"\${SSH_KEY}\" -o StrictHostKeyChecking=no \"\${SSH_USER}@${params.SERVER_ADDRESS}\" \"sudo -u ${env.USER_SYS} -g ${env.USER_SYS} ls -lh ${REMOTE_SECRETS_DIR}/\"" : ''}
 
 echo "[SUCCESS] Секреты успешно переданы и размещены в ${REMOTE_SECRETS_DIR}"
                         """
@@ -948,9 +948,9 @@ echo "[SUCCESS] Секреты успешно переданы и размеще
 echo "=========================================="
 echo "ПРОВЕРКА СТАТУСА СЕРВИСОВ:"
 echo "=========================================="
-sudo -u ${env.USER_CI} sudo -u ${env.USER_SYS} -g ${env.USER_SYS} systemctl --user status prometheus | grep "Active:"
-sudo -u ${env.USER_CI} sudo -u ${env.USER_SYS} -g ${env.USER_SYS} systemctl --user status grafana | grep "Active:"
-sudo -u ${env.USER_CI} sudo -u ${env.USER_SYS} -g ${env.USER_SYS} systemctl --user status harvest | grep "Active:"
+sudo -u ${env.USER_SYS} -g ${env.USER_SYS} systemctl --user status prometheus | grep "Active:"
+sudo -u ${env.USER_SYS} -g ${env.USER_SYS} systemctl --user status grafana | grep "Active:"
+sudo -u ${env.USER_SYS} -g ${env.USER_SYS} systemctl --user status harvest | grep "Active:"
 echo ""
 echo "=========================================="
 echo "ПРОВЕРКА ПОРТОВ:"
