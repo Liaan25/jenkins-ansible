@@ -88,6 +88,16 @@
    ALL=(ALL:ALL) NOPASSWD: /usr/bin/chmod 600 /dev/shm/monitoring_secrets/server.key
    ```
 
+6. **Флаг NOEXEC для команд просмотра**
+   ```bash
+   # Для команд, которые могут запускать пейджер (less, more):
+   ALL=(ALL:ALL) NOPASSWD: NOEXEC: /usr/bin/systemctl --user status prometheus
+   ALL=(ALL:ALL) NOPASSWD: NOEXEC: /usr/bin/journalctl --user -u prometheus
+   
+   # NOEXEC предотвращает выполнение команд через пейджер (например, !sh в less)
+   # Это критично для безопасности при использовании команд просмотра статуса
+   ```
+
 ### Логика без учета логина
 
 Согласно требованиям, права вводятся без учета конкретного логина:
@@ -178,6 +188,7 @@ monitoring_ci ALL=(ALL:ALL) NOPASSWD: /usr/bin/chown -R monitoring_ci:monitoring
 monitoring_ci ALL=(ALL:ALL) NOPASSWD: /usr/bin/systemctl --user daemon-reload
 monitoring_ci ALL=(ALL:ALL) NOPASSWD: /usr/bin/systemctl --user enable grafana
 monitoring_ci ALL=(ALL:ALL) NOPASSWD: /usr/bin/systemctl --user enable harvest
+monitoring_ci ALL=(ALL:ALL) NOPASSWD: NOEXEC: /usr/bin/systemctl --user status grafana
 ...
 ```
 

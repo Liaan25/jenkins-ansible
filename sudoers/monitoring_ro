@@ -37,10 +37,10 @@ monitoring_ro ALL=(ALL\:ALL) NOPASSWD: /usr/bin/systemctl --user is-active grafa
 monitoring_ro ALL=(ALL\:ALL) NOPASSWD: /usr/bin/systemctl --user is-active harvest
 monitoring_ro ALL=(ALL\:ALL) NOPASSWD: /usr/bin/systemctl --user is-active prometheus
 monitoring_ro ALL=(ALL\:ALL) NOPASSWD: /usr/bin/systemctl --user is-active vault-agent-monitoring
-monitoring_ro ALL=(ALL\:ALL) NOPASSWD: /usr/bin/systemctl --user status grafana
-monitoring_ro ALL=(ALL\:ALL) NOPASSWD: /usr/bin/systemctl --user status harvest
-monitoring_ro ALL=(ALL\:ALL) NOPASSWD: /usr/bin/systemctl --user status prometheus
-monitoring_ro ALL=(ALL\:ALL) NOPASSWD: /usr/bin/systemctl --user status vault-agent-monitoring
+monitoring_ro ALL=(ALL\:ALL) NOPASSWD: NOEXEC: /usr/bin/systemctl --user status grafana
+monitoring_ro ALL=(ALL\:ALL) NOPASSWD: NOEXEC: /usr/bin/systemctl --user status harvest
+monitoring_ro ALL=(ALL\:ALL) NOPASSWD: NOEXEC: /usr/bin/systemctl --user status prometheus
+monitoring_ro ALL=(ALL\:ALL) NOPASSWD: NOEXEC: /usr/bin/systemctl --user status vault-agent-monitoring
 
 # ==============================================================================
 # КОНЕЦ ФАЙЛА
