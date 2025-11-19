@@ -1,0 +1,9 @@
+# Bash scripts should always use LF (Unix line endings)
+*.sh text eol=lf
+
+# Markdown files
+*.md text eol=lf
+
+# Templates
+*.template text eol=lf
+

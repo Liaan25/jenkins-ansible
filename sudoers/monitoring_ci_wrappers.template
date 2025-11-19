@@ -1,0 +1,174 @@
+# Sudoers file for {{USER_CI}} (Техническая УЗ для CI/CD деплоя)
+# 
+# ВАЖНО: Этот файл должен быть размещен в /etc/sudoers.d/{{USER_CI}}
+# После размещения проверить синтаксис: sudo visudo -c -f /etc/sudoers.d/{{USER_CI}}
+#
+# Создание УЗ и запрос прав выполняется через IDM (см. docs/IDM_ACCOUNTS_GUIDE.md)
+# Полная документация: docs/CORPORATE_SECURITY_RULES.md
+#
+# Пользователь: {{USER_CI}}
+# Тип: ТУЗ (Техническая учетная запись)
+# Назначение: Автоматизированный деплой через Jenkins/Ansible
+# Права: Ограниченные с использованием скрипт-оберток
+#
+# АРХИТЕКТУРА БЕЗОПАСНОСТИ:
+#   - Все динамические команды обернуты в скрипты с валидацией
+#   - Скрипты защищены SHA256 хешами
+#   - Никаких переменных в критических командах
+#   - Следование принципу наименьших привилегий
+#
+
+# ==============================================================================
+# ПЕРЕКЛЮЧЕНИЕ НА ДРУГОГО ПОЛЬЗОВАТЕЛЯ
+# ==============================================================================
+
+# Возможность выполнения команд от имени {{USER_SYS}} с группой {{USER_SYS}}
+{{USER_CI}} ALL=({{USER_SYS}}:{{USER_SYS}}) NOPASSWD: /usr/bin/bash -c *
+{{USER_CI}} ALL=({{USER_SYS}}:{{USER_SYS}}) NOPASSWD: /usr/bin/bash
+{{USER_CI}} ALL=({{USER_SYS}}:{{USER_SYS}}) NOPASSWD: /usr/bin/mkdir *
+{{USER_CI}} ALL=({{USER_SYS}}:{{USER_SYS}}) NOPASSWD: /usr/bin/chmod *
+{{USER_CI}} ALL=({{USER_SYS}}:{{USER_SYS}}) NOPASSWD: /usr/bin/chown *
+
+# ==============================================================================
+# СКРИПТЫ-ОБЕРТКИ (защищены SHA256 хешами)
+# ==============================================================================
+
+# Управление Firewall (iptables)
+Cmnd_Alias FIREWALL_WRAPPER = sha256:{{SHA256_FIREWALL}} /opt/monitoring/scripts/wrappers/manage_firewall.sh
+{{USER_CI}} ALL=(ALL:ALL) NOPASSWD: FIREWALL_WRAPPER
+
+# Управление сертификатами из Vault
+Cmnd_Alias VAULT_CERTS_WRAPPER = sha256:{{SHA256_CERTS}} /opt/monitoring/scripts/wrappers/manage_vault_certs.sh
+{{USER_CI}} ALL=(ALL:ALL) NOPASSWD: VAULT_CERTS_WRAPPER
+
+# Вызовы RLM API
+Cmnd_Alias RLM_API_WRAPPER = sha256:{{SHA256_RLM}} /opt/monitoring/scripts/wrappers/call_rlm_api.sh
+{{USER_CI}} ALL=(ALL:ALL) NOPASSWD: RLM_API_WRAPPER
+
+# ==============================================================================
+# USER SYSTEMD UNITS (от имени {{USER_SYS}})
+# ==============================================================================
+
+# daemon-reload
+{{USER_CI}} ALL=({{USER_SYS}}:{{USER_SYS}}) NOPASSWD: /usr/bin/systemctl --user daemon-reload
+
+# enable (автозапуск)
+{{USER_CI}} ALL=({{USER_SYS}}:{{USER_SYS}}) NOPASSWD: /usr/bin/systemctl --user enable grafana
+{{USER_CI}} ALL=({{USER_SYS}}:{{USER_SYS}}) NOPASSWD: /usr/bin/systemctl --user enable harvest
+{{USER_CI}} ALL=({{USER_SYS}}:{{USER_SYS}}) NOPASSWD: /usr/bin/systemctl --user enable prometheus
+{{USER_CI}} ALL=({{USER_SYS}}:{{USER_SYS}}) NOPASSWD: /usr/bin/systemctl --user enable vault-agent-monitoring
+
+# disable
+{{USER_CI}} ALL=({{USER_SYS}}:{{USER_SYS}}) NOPASSWD: /usr/bin/systemctl --user disable grafana
+{{USER_CI}} ALL=({{USER_SYS}}:{{USER_SYS}}) NOPASSWD: /usr/bin/systemctl --user disable harvest
+{{USER_CI}} ALL=({{USER_SYS}}:{{USER_SYS}}) NOPASSWD: /usr/bin/systemctl --user disable prometheus
+{{USER_CI}} ALL=({{USER_SYS}}:{{USER_SYS}}) NOPASSWD: /usr/bin/systemctl --user disable vault-agent-monitoring
+
+# start
+{{USER_CI}} ALL=({{USER_SYS}}:{{USER_SYS}}) NOPASSWD: /usr/bin/systemctl --user start grafana
+{{USER_CI}} ALL=({{USER_SYS}}:{{USER_SYS}}) NOPASSWD: /usr/bin/systemctl --user start harvest
+{{USER_CI}} ALL=({{USER_SYS}}:{{USER_SYS}}) NOPASSWD: /usr/bin/systemctl --user start prometheus
+{{USER_CI}} ALL=({{USER_SYS}}:{{USER_SYS}}) NOPASSWD: /usr/bin/systemctl --user start vault-agent-monitoring
+
+# stop
+{{USER_CI}} ALL=({{USER_SYS}}:{{USER_SYS}}) NOPASSWD: /usr/bin/systemctl --user stop grafana
+{{USER_CI}} ALL=({{USER_SYS}}:{{USER_SYS}}) NOPASSWD: /usr/bin/systemctl --user stop harvest
+{{USER_CI}} ALL=({{USER_SYS}}:{{USER_SYS}}) NOPASSWD: /usr/bin/systemctl --user stop prometheus
+{{USER_CI}} ALL=({{USER_SYS}}:{{USER_SYS}}) NOPASSWD: /usr/bin/systemctl --user stop vault-agent-monitoring
+
+# restart
+{{USER_CI}} ALL=({{USER_SYS}}:{{USER_SYS}}) NOPASSWD: /usr/bin/systemctl --user restart grafana
+{{USER_CI}} ALL=({{USER_SYS}}:{{USER_SYS}}) NOPASSWD: /usr/bin/systemctl --user restart harvest
+{{USER_CI}} ALL=({{USER_SYS}}:{{USER_SYS}}) NOPASSWD: /usr/bin/systemctl --user restart prometheus
+{{USER_CI}} ALL=({{USER_SYS}}:{{USER_SYS}}) NOPASSWD: /usr/bin/systemctl --user restart vault-agent-monitoring
+
+# status (с NOEXEC для безопасности)
+{{USER_CI}} ALL=({{USER_SYS}}:{{USER_SYS}}) NOPASSWD: NOEXEC: /usr/bin/systemctl --user status grafana
+{{USER_CI}} ALL=({{USER_SYS}}:{{USER_SYS}}) NOPASSWD: NOEXEC: /usr/bin/systemctl --user status harvest
+{{USER_CI}} ALL=({{USER_SYS}}:{{USER_SYS}}) NOPASSWD: NOEXEC: /usr/bin/systemctl --user status prometheus
+{{USER_CI}} ALL=({{USER_SYS}}:{{USER_SYS}}) NOPASSWD: NOEXEC: /usr/bin/systemctl --user status vault-agent-monitoring
+
+# ==============================================================================
+# JOURNALCTL (просмотр логов User Units с NOEXEC)
+# ==============================================================================
+
+{{USER_CI}} ALL=({{USER_SYS}}:{{USER_SYS}}) NOPASSWD: NOEXEC: /usr/bin/journalctl --user -u grafana
+{{USER_CI}} ALL=({{USER_SYS}}:{{USER_SYS}}) NOPASSWD: NOEXEC: /usr/bin/journalctl --user -u harvest
+{{USER_CI}} ALL=({{USER_SYS}}:{{USER_SYS}}) NOPASSWD: NOEXEC: /usr/bin/journalctl --user -u prometheus
+{{USER_CI}} ALL=({{USER_SYS}}:{{USER_SYS}}) NOPASSWD: NOEXEC: /usr/bin/journalctl --user -u vault-agent-monitoring
+
+# ==============================================================================
+# УПРАВЛЕНИЕ ФАЙЛАМИ И ДИРЕКТОРИЯМИ
+# ==============================================================================
+
+# Создание структуры каталогов
+{{USER_CI}} ALL=(ALL:ALL) NOPASSWD: /usr/bin/mkdir -p /opt/monitoring
+{{USER_CI}} ALL=(ALL:ALL) NOPASSWD: /usr/bin/mkdir -p /opt/monitoring/bin
+{{USER_CI}} ALL=(ALL:ALL) NOPASSWD: /usr/bin/mkdir -p /opt/monitoring/config
+{{USER_CI}} ALL=(ALL:ALL) NOPASSWD: /usr/bin/mkdir -p /opt/monitoring/data
+{{USER_CI}} ALL=(ALL:ALL) NOPASSWD: /usr/bin/mkdir -p /opt/monitoring/logs
+{{USER_CI}} ALL=(ALL:ALL) NOPASSWD: /usr/bin/mkdir -p /opt/monitoring/certs
+{{USER_CI}} ALL=(ALL:ALL) NOPASSWD: /usr/bin/mkdir -p /opt/monitoring/scripts
+{{USER_CI}} ALL=(ALL:ALL) NOPASSWD: /usr/bin/mkdir -p /opt/monitoring/scripts/wrappers
+
+# Права на директории (явно указанные)
+{{USER_CI}} ALL=(ALL:ALL) NOPASSWD: /usr/bin/chmod 750 /opt/monitoring
+{{USER_CI}} ALL=(ALL:ALL) NOPASSWD: /usr/bin/chmod 750 /opt/monitoring/bin
+{{USER_CI}} ALL=(ALL:ALL) NOPASSWD: /usr/bin/chmod 750 /opt/monitoring/config
+{{USER_CI}} ALL=(ALL:ALL) NOPASSWD: /usr/bin/chmod 770 /opt/monitoring/data
+{{USER_CI}} ALL=(ALL:ALL) NOPASSWD: /usr/bin/chmod 770 /opt/monitoring/logs
+{{USER_CI}} ALL=(ALL:ALL) NOPASSWD: /usr/bin/chmod 750 /opt/monitoring/certs
+{{USER_CI}} ALL=(ALL:ALL) NOPASSWD: /usr/bin/chmod 755 /opt/monitoring/scripts
+{{USER_CI}} ALL=(ALL:ALL) NOPASSWD: /usr/bin/chmod 750 /opt/monitoring/scripts/wrappers
+
+# Владельцы директорий
+{{USER_CI}} ALL=(ALL:ALL) NOPASSWD: /usr/bin/chown -R {{USER_CI}}\:{{USER_SYS}} /opt/monitoring/bin
+{{USER_CI}} ALL=(ALL:ALL) NOPASSWD: /usr/bin/chown -R {{USER_CI}}\:{{USER_SYS}} /opt/monitoring/config
+{{USER_CI}} ALL=(ALL:ALL) NOPASSWD: /usr/bin/chown -R {{USER_SYS}}\:{{USER_SYS}} /opt/monitoring/data
+{{USER_CI}} ALL=(ALL:ALL) NOPASSWD: /usr/bin/chown -R {{USER_SYS}}\:{{USER_SYS}} /opt/monitoring/logs
+{{USER_CI}} ALL=(ALL:ALL) NOPASSWD: /usr/bin/chown -R {{USER_CI}}\:{{USER_SYS}} /opt/monitoring/certs
+{{USER_CI}} ALL=(ALL:ALL) NOPASSWD: /usr/bin/chown -R {{USER_CI}}\:{{USER_SYS}} /opt/monitoring/scripts
+
+# ==============================================================================
+# LOGINCTL (для User Units)
+# ==============================================================================
+
+# Включение lingering (сервисы работают без логина пользователя)
+{{USER_CI}} ALL=(ALL:ALL) NOPASSWD: /usr/bin/loginctl enable-linger {{USER_SYS}}
+{{USER_CI}} ALL=(ALL:ALL) NOPASSWD: /usr/bin/loginctl disable-linger {{USER_SYS}}
+
+# ==============================================================================
+# ПРОВЕРКА ГРУПП (для RLM интеграции)
+# ==============================================================================
+
+# Проверка членства в группах (для pre-check перед RLM API)
+{{USER_CI}} ALL=(ALL:ALL) NOPASSWD: NOEXEC: /usr/bin/id {{USER_SYS}}
+{{USER_CI}} ALL=(ALL:ALL) NOPASSWD: NOEXEC: /usr/bin/id {{USER_ADMIN}}
+{{USER_CI}} ALL=(ALL:ALL) NOPASSWD: NOEXEC: /usr/bin/id {{USER_CI}}
+{{USER_CI}} ALL=(ALL:ALL) NOPASSWD: NOEXEC: /usr/bin/id {{USER_RO}}
+{{USER_CI}} ALL=(ALL:ALL) NOPASSWD: NOEXEC: /usr/bin/groups {{USER_SYS}}
+{{USER_CI}} ALL=(ALL:ALL) NOPASSWD: NOEXEC: /usr/bin/groups {{USER_ADMIN}}
+{{USER_CI}} ALL=(ALL:ALL) NOPASSWD: NOEXEC: /usr/bin/groups {{USER_CI}}
+{{USER_CI}} ALL=(ALL:ALL) NOPASSWD: NOEXEC: /usr/bin/groups {{USER_RO}}
+
+# ==============================================================================
+# УТИЛИТЫ (без sudo, но для полноты sudoers)
+# ==============================================================================
+
+# Эти команды НЕ требуют sudo (могут выполняться от текущего пользователя)
+# Указаны для документирования, что они доступны
+# 
+# - /usr/bin/pwd
+# - /usr/bin/ps
+# - /usr/bin/hostname
+# - /usr/bin/grep
+# - /usr/bin/cat (для чтения своих файлов)
+# - /usr/bin/ls
+# - /usr/bin/find
+#
+# НЕ ДОБАВЛЯЙТЕ ЭТИ КОМАНДЫ В SUDOERS! Они работают без sudo.
+
+# ==============================================================================
+# КОНЕЦ ФАЙЛА
+# ==============================================================================
+

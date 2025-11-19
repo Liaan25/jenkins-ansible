@@ -1,0 +1,54 @@
+# Sudoers file for {{USER_RO}} (ReadOnly УЗ для мониторинга и аудита)
+# 
+# ВАЖНО: Этот файл должен быть размещен в /etc/sudoers.d/{{USER_RO}}
+# После размещения проверить синтаксис: sudo visudo -c -f /etc/sudoers.d/{{USER_RO}}
+#
+# Пользователь: {{USER_RO}}
+# Тип: ReadOnly (учетная запись только для чтения)
+# Назначение: Мониторинг состояния, просмотр логов, аудит
+# Права: Только просмотр (NOEXEC на все команды)
+#
+
+# ==============================================================================
+# USER SYSTEMD UNITS - STATUS ONLY (с NOEXEC)
+# ==============================================================================
+
+{{USER_RO}} ALL=({{USER_SYS}}:{{USER_SYS}}) NOPASSWD: NOEXEC: /usr/bin/systemctl --user status grafana
+{{USER_RO}} ALL=({{USER_SYS}}:{{USER_SYS}}) NOPASSWD: NOEXEC: /usr/bin/systemctl --user status harvest
+{{USER_RO}} ALL=({{USER_SYS}}:{{USER_SYS}}) NOPASSWD: NOEXEC: /usr/bin/systemctl --user status prometheus
+{{USER_RO}} ALL=({{USER_SYS}}:{{USER_SYS}}) NOPASSWD: NOEXEC: /usr/bin/systemctl --user status vault-agent-monitoring
+
+# Проверка что unit включен
+{{USER_RO}} ALL=({{USER_SYS}}:{{USER_SYS}}) NOPASSWD: NOEXEC: /usr/bin/systemctl --user is-active grafana
+{{USER_RO}} ALL=({{USER_SYS}}:{{USER_SYS}}) NOPASSWD: NOEXEC: /usr/bin/systemctl --user is-active harvest
+{{USER_RO}} ALL=({{USER_SYS}}:{{USER_SYS}}) NOPASSWD: NOEXEC: /usr/bin/systemctl --user is-active prometheus
+{{USER_RO}} ALL=({{USER_SYS}}:{{USER_SYS}}) NOPASSWD: NOEXEC: /usr/bin/systemctl --user is-active vault-agent-monitoring
+
+{{USER_RO}} ALL=({{USER_SYS}}:{{USER_SYS}}) NOPASSWD: NOEXEC: /usr/bin/systemctl --user is-enabled grafana
+{{USER_RO}} ALL=({{USER_SYS}}:{{USER_SYS}}) NOPASSWD: NOEXEC: /usr/bin/systemctl --user is-enabled harvest
+{{USER_RO}} ALL=({{USER_SYS}}:{{USER_SYS}}) NOPASSWD: NOEXEC: /usr/bin/systemctl --user is-enabled prometheus
+{{USER_RO}} ALL=({{USER_SYS}}:{{USER_SYS}}) NOPASSWD: NOEXEC: /usr/bin/systemctl --user is-enabled vault-agent-monitoring
+
+# ==============================================================================
+# JOURNALCTL (просмотр логов с NOEXEC)
+# ==============================================================================
+
+{{USER_RO}} ALL=({{USER_SYS}}:{{USER_SYS}}) NOPASSWD: NOEXEC: /usr/bin/journalctl --user -u grafana
+{{USER_RO}} ALL=({{USER_SYS}}:{{USER_SYS}}) NOPASSWD: NOEXEC: /usr/bin/journalctl --user -u harvest
+{{USER_RO}} ALL=({{USER_SYS}}:{{USER_SYS}}) NOPASSWD: NOEXEC: /usr/bin/journalctl --user -u prometheus
+{{USER_RO}} ALL=({{USER_SYS}}:{{USER_SYS}}) NOPASSWD: NOEXEC: /usr/bin/journalctl --user -u vault-agent-monitoring
+{{USER_RO}} ALL=({{USER_SYS}}:{{USER_SYS}}) NOPASSWD: NOEXEC: /usr/bin/journalctl --user --follow
+{{USER_RO}} ALL=({{USER_SYS}}:{{USER_SYS}}) NOPASSWD: NOEXEC: /usr/bin/journalctl --user --since *
+
+# ==============================================================================
+# ДИАГНОСТИКА (только просмотр с NOEXEC)
+# ==============================================================================
+
+# Проверка групп
+{{USER_RO}} ALL=(ALL:ALL) NOPASSWD: NOEXEC: /usr/bin/id {{USER_SYS}}
+{{USER_RO}} ALL=(ALL:ALL) NOPASSWD: NOEXEC: /usr/bin/groups {{USER_SYS}}
+
+# ==============================================================================
+# КОНЕЦ ФАЙЛА
+# ==============================================================================
+

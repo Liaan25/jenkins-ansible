@@ -1,0 +1,80 @@
+# Sudoers file for {{USER_ADMIN}} (Привилегированная УЗ для администрирования)
+# 
+# ВАЖНО: Этот файл должен быть размещен в /etc/sudoers.d/{{USER_ADMIN}}
+# После размещения проверить синтаксис: sudo visudo -c -f /etc/sudoers.d/{{USER_ADMIN}}
+#
+# Пользователь: {{USER_ADMIN}}
+# Тип: ПУЗ (Привилегированная учетная запись)
+# Назначение: Администрирование системы мониторинга
+# Права: Управление сервисами, просмотр логов, базовая диагностика
+#
+
+# ==============================================================================
+# ПЕРЕКЛЮЧЕНИЕ НА СЕРВИСНОГО ПОЛЬЗОВАТЕЛЯ
+# ==============================================================================
+
+# Возможность выполнения команд от имени {{USER_SYS}} (полные права)
+{{USER_ADMIN}} ALL=({{USER_SYS}}) NOPASSWD: ALL
+
+# ==============================================================================
+# USER SYSTEMD UNITS (от имени {{USER_SYS}})
+# ==============================================================================
+
+# start
+{{USER_ADMIN}} ALL=({{USER_SYS}}:{{USER_SYS}}) NOPASSWD: /usr/bin/systemctl --user start grafana
+{{USER_ADMIN}} ALL=({{USER_SYS}}:{{USER_SYS}}) NOPASSWD: /usr/bin/systemctl --user start harvest
+{{USER_ADMIN}} ALL=({{USER_SYS}}:{{USER_SYS}}) NOPASSWD: /usr/bin/systemctl --user start prometheus
+{{USER_ADMIN}} ALL=({{USER_SYS}}:{{USER_SYS}}) NOPASSWD: /usr/bin/systemctl --user start vault-agent-monitoring
+
+# stop
+{{USER_ADMIN}} ALL=({{USER_SYS}}:{{USER_SYS}}) NOPASSWD: /usr/bin/systemctl --user stop grafana
+{{USER_ADMIN}} ALL=({{USER_SYS}}:{{USER_SYS}}) NOPASSWD: /usr/bin/systemctl --user stop harvest
+{{USER_ADMIN}} ALL=({{USER_SYS}}:{{USER_SYS}}) NOPASSWD: /usr/bin/systemctl --user stop prometheus
+{{USER_ADMIN}} ALL=({{USER_SYS}}:{{USER_SYS}}) NOPASSWD: /usr/bin/systemctl --user stop vault-agent-monitoring
+
+# restart
+{{USER_ADMIN}} ALL=({{USER_SYS}}:{{USER_SYS}}) NOPASSWD: /usr/bin/systemctl --user restart grafana
+{{USER_ADMIN}} ALL=({{USER_SYS}}:{{USER_SYS}}) NOPASSWD: /usr/bin/systemctl --user restart harvest
+{{USER_ADMIN}} ALL=({{USER_SYS}}:{{USER_SYS}}) NOPASSWD: /usr/bin/systemctl --user restart prometheus
+{{USER_ADMIN}} ALL=({{USER_SYS}}:{{USER_SYS}}) NOPASSWD: /usr/bin/systemctl --user restart vault-agent-monitoring
+
+# status (с NOEXEC)
+{{USER_ADMIN}} ALL=({{USER_SYS}}:{{USER_SYS}}) NOPASSWD: NOEXEC: /usr/bin/systemctl --user status grafana
+{{USER_ADMIN}} ALL=({{USER_SYS}}:{{USER_SYS}}) NOPASSWD: NOEXEC: /usr/bin/systemctl --user status harvest
+{{USER_ADMIN}} ALL=({{USER_SYS}}:{{USER_SYS}}) NOPASSWD: NOEXEC: /usr/bin/systemctl --user status prometheus
+{{USER_ADMIN}} ALL=({{USER_SYS}}:{{USER_SYS}}) NOPASSWD: NOEXEC: /usr/bin/systemctl --user status vault-agent-monitoring
+
+# daemon-reload
+{{USER_ADMIN}} ALL=({{USER_SYS}}:{{USER_SYS}}) NOPASSWD: /usr/bin/systemctl --user daemon-reload
+
+# ==============================================================================
+# JOURNALCTL (просмотр логов с NOEXEC)
+# ==============================================================================
+
+{{USER_ADMIN}} ALL=({{USER_SYS}}:{{USER_SYS}}) NOPASSWD: NOEXEC: /usr/bin/journalctl --user -u grafana
+{{USER_ADMIN}} ALL=({{USER_SYS}}:{{USER_SYS}}) NOPASSWD: NOEXEC: /usr/bin/journalctl --user -u harvest
+{{USER_ADMIN}} ALL=({{USER_SYS}}:{{USER_SYS}}) NOPASSWD: NOEXEC: /usr/bin/journalctl --user -u prometheus
+{{USER_ADMIN}} ALL=({{USER_SYS}}:{{USER_SYS}}) NOPASSWD: NOEXEC: /usr/bin/journalctl --user -u vault-agent-monitoring
+{{USER_ADMIN}} ALL=({{USER_SYS}}:{{USER_SYS}}) NOPASSWD: NOEXEC: /usr/bin/journalctl --user --follow
+{{USER_ADMIN}} ALL=({{USER_SYS}}:{{USER_SYS}}) NOPASSWD: NOEXEC: /usr/bin/journalctl --user --since *
+
+# ==============================================================================
+# СКРИПТЫ-ОБЕРТКИ (только Firewall для emergency случаев)
+# ==============================================================================
+
+# Управление Firewall (ограниченное)
+Cmnd_Alias FIREWALL_WRAPPER = sha256:{{SHA256_FIREWALL}} /opt/monitoring/scripts/wrappers/manage_firewall.sh
+{{USER_ADMIN}} ALL=(ALL:ALL) NOPASSWD: FIREWALL_WRAPPER
+
+# ==============================================================================
+# ДИАГНОСТИКА
+# ==============================================================================
+
+# Проверка групп
+{{USER_ADMIN}} ALL=(ALL:ALL) NOPASSWD: NOEXEC: /usr/bin/id {{USER_SYS}}
+{{USER_ADMIN}} ALL=(ALL:ALL) NOPASSWD: NOEXEC: /usr/bin/groups {{USER_SYS}}
+
+# ==============================================================================
+# КОНЕЦ ФАЙЛА
+# ==============================================================================
+
