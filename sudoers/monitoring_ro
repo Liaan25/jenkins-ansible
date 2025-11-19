@@ -1,0 +1,48 @@
+# Sudoers file for monitoring_ro (ReadOnly УЗ для аудита)
+# 
+# ВАЖНО: Этот файл должен быть размещен в /etc/sudoers.d/monitoring_ro
+# После размещения проверить синтаксис: sudo visudo -c -f /etc/sudoers.d/monitoring_ro
+#
+# Создание УЗ и запрос прав выполняется через IDM (см. docs/IDM_ACCOUNTS_GUIDE.md)
+# Полная документация: docs/SUDOERS_GUIDE.md
+#
+# Пользователь: monitoring_ro
+# Тип: ReadOnly (учетная запись только для чтения)
+# Назначение: Аудит, просмотр статуса и логов, разработка без прав изменения
+# Права: Минимальные (только просмотр, БЕЗ управления)
+#
+
+# ==============================================================================
+# ДИАГНОСТИКА (ТОЛЬКО ПРОСМОТР)
+# ==============================================================================
+
+monitoring_ro ALL=(ALL\:ALL) NOPASSWD: /usr/bin/df -h
+monitoring_ro ALL=(ALL\:ALL) NOPASSWD: /usr/bin/ps aux
+monitoring_ro ALL=(ALL\:ALL) NOPASSWD: /usr/bin/ss -tlnp
+
+# ==============================================================================
+# ПРОСМОТР ЛОГОВ
+# ==============================================================================
+
+monitoring_ro ALL=(ALL\:ALL) NOPASSWD: /usr/bin/journalctl --user -u grafana
+monitoring_ro ALL=(ALL\:ALL) NOPASSWD: /usr/bin/journalctl --user -u harvest
+monitoring_ro ALL=(ALL\:ALL) NOPASSWD: /usr/bin/journalctl --user -u prometheus
+monitoring_ro ALL=(ALL\:ALL) NOPASSWD: /usr/bin/journalctl --user -u vault-agent-monitoring
+
+# ==============================================================================
+# ПРОСМОТР СТАТУСА СЕРВИСОВ (БЕЗ УПРАВЛЕНИЯ)
+# ==============================================================================
+
+monitoring_ro ALL=(ALL\:ALL) NOPASSWD: /usr/bin/systemctl --user is-active grafana
+monitoring_ro ALL=(ALL\:ALL) NOPASSWD: /usr/bin/systemctl --user is-active harvest
+monitoring_ro ALL=(ALL\:ALL) NOPASSWD: /usr/bin/systemctl --user is-active prometheus
+monitoring_ro ALL=(ALL\:ALL) NOPASSWD: /usr/bin/systemctl --user is-active vault-agent-monitoring
+monitoring_ro ALL=(ALL\:ALL) NOPASSWD: /usr/bin/systemctl --user status grafana
+monitoring_ro ALL=(ALL\:ALL) NOPASSWD: /usr/bin/systemctl --user status harvest
+monitoring_ro ALL=(ALL\:ALL) NOPASSWD: /usr/bin/systemctl --user status prometheus
+monitoring_ro ALL=(ALL\:ALL) NOPASSWD: /usr/bin/systemctl --user status vault-agent-monitoring
+
+# ==============================================================================
+# КОНЕЦ ФАЙЛА
+# ==============================================================================
+

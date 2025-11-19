@@ -1,0 +1,78 @@
+# Sudoers file for monitoring_admin (Привилегированная УЗ для администрирования)
+# 
+# ВАЖНО: Этот файл должен быть размещен в /etc/sudoers.d/monitoring_admin
+# После размещения проверить синтаксис: sudo visudo -c -f /etc/sudoers.d/monitoring_admin
+#
+# Создание УЗ и запрос прав выполняется через IDM (см. docs/IDM_ACCOUNTS_GUIDE.md)
+# Полная документация: docs/SUDOERS_GUIDE.md
+#
+# Пользователь: monitoring_admin
+# Тип: ПУЗ (Привилегированная учетная запись)
+# Назначение: Администрирование системы, управление сервисами, диагностика
+# Права: Средние (без деплоя, но с управлением сервисами)
+#
+
+# ==============================================================================
+# ПЕРЕКЛЮЧЕНИЕ НА ДРУГОГО ПОЛЬЗОВАТЕЛЯ
+# ==============================================================================
+
+# Возможность выполнения команд от имени monitoring_svc
+monitoring_admin ALL=(monitoring_svc) NOPASSWD: ALL
+
+# ==============================================================================
+# СОЗДАНИЕ БЭКАПОВ
+# ==============================================================================
+
+monitoring_admin ALL=(ALL\:ALL) NOPASSWD: /usr/bin/tar -czf /opt/monitoring/backups/config_*.tar.gz /opt/monitoring/config/
+
+# ==============================================================================
+# ДИАГНОСТИЧЕСКИЕ КОМАНДЫ
+# ==============================================================================
+
+monitoring_admin ALL=(ALL\:ALL) NOPASSWD: /usr/bin/df -h
+monitoring_admin ALL=(ALL\:ALL) NOPASSWD: /usr/bin/ps aux
+monitoring_admin ALL=(ALL\:ALL) NOPASSWD: /usr/bin/ss -tlnp
+monitoring_admin ALL=(ALL\:ALL) NOPASSWD: /usr/sbin/lsof -i TCP\:12990
+monitoring_admin ALL=(ALL\:ALL) NOPASSWD: /usr/sbin/lsof -i TCP\:12991
+monitoring_admin ALL=(ALL\:ALL) NOPASSWD: /usr/sbin/lsof -i TCP\:3000
+monitoring_admin ALL=(ALL\:ALL) NOPASSWD: /usr/sbin/lsof -i TCP\:9090
+
+# ==============================================================================
+# ПРОСМОТР ЛОГОВ
+# ==============================================================================
+
+monitoring_admin ALL=(ALL\:ALL) NOPASSWD: /usr/bin/journalctl --user -u grafana
+monitoring_admin ALL=(ALL\:ALL) NOPASSWD: /usr/bin/journalctl --user -u harvest
+monitoring_admin ALL=(ALL\:ALL) NOPASSWD: /usr/bin/journalctl --user -u prometheus
+monitoring_admin ALL=(ALL\:ALL) NOPASSWD: /usr/bin/journalctl --user -u vault-agent-monitoring
+
+# ==============================================================================
+# УПРАВЛЕНИЕ USER SYSTEMD UNITS
+# ==============================================================================
+
+monitoring_admin ALL=(ALL\:ALL) NOPASSWD: /usr/bin/systemctl --user daemon-reload
+monitoring_admin ALL=(ALL\:ALL) NOPASSWD: /usr/bin/systemctl --user is-active grafana
+monitoring_admin ALL=(ALL\:ALL) NOPASSWD: /usr/bin/systemctl --user is-active harvest
+monitoring_admin ALL=(ALL\:ALL) NOPASSWD: /usr/bin/systemctl --user is-active prometheus
+monitoring_admin ALL=(ALL\:ALL) NOPASSWD: /usr/bin/systemctl --user is-active vault-agent-monitoring
+monitoring_admin ALL=(ALL\:ALL) NOPASSWD: /usr/bin/systemctl --user restart grafana
+monitoring_admin ALL=(ALL\:ALL) NOPASSWD: /usr/bin/systemctl --user restart harvest
+monitoring_admin ALL=(ALL\:ALL) NOPASSWD: /usr/bin/systemctl --user restart prometheus
+monitoring_admin ALL=(ALL\:ALL) NOPASSWD: /usr/bin/systemctl --user restart vault-agent-monitoring
+monitoring_admin ALL=(ALL\:ALL) NOPASSWD: /usr/bin/systemctl --user start grafana
+monitoring_admin ALL=(ALL\:ALL) NOPASSWD: /usr/bin/systemctl --user start harvest
+monitoring_admin ALL=(ALL\:ALL) NOPASSWD: /usr/bin/systemctl --user start prometheus
+monitoring_admin ALL=(ALL\:ALL) NOPASSWD: /usr/bin/systemctl --user start vault-agent-monitoring
+monitoring_admin ALL=(ALL\:ALL) NOPASSWD: /usr/bin/systemctl --user status grafana
+monitoring_admin ALL=(ALL\:ALL) NOPASSWD: /usr/bin/systemctl --user status harvest
+monitoring_admin ALL=(ALL\:ALL) NOPASSWD: /usr/bin/systemctl --user status prometheus
+monitoring_admin ALL=(ALL\:ALL) NOPASSWD: /usr/bin/systemctl --user status vault-agent-monitoring
+monitoring_admin ALL=(ALL\:ALL) NOPASSWD: /usr/bin/systemctl --user stop grafana
+monitoring_admin ALL=(ALL\:ALL) NOPASSWD: /usr/bin/systemctl --user stop harvest
+monitoring_admin ALL=(ALL\:ALL) NOPASSWD: /usr/bin/systemctl --user stop prometheus
+monitoring_admin ALL=(ALL\:ALL) NOPASSWD: /usr/bin/systemctl --user stop vault-agent-monitoring
+
+# ==============================================================================
+# КОНЕЦ ФАЙЛА
+# ==============================================================================
+
