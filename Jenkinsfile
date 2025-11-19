@@ -631,19 +631,111 @@ set -euo pipefail
 
 ${params.DEBUG ? 'set -x' : ''}
 
+${params.DEBUG ? """
+echo "========================================================================"
+echo "DEBUG: ИНФОРМАЦИЯ О ТЕКУЩЕМ ПОЛЬЗОВАТЕЛЕ SSH"
+echo "========================================================================"
+ssh -i "\${SSH_KEY}" -o StrictHostKeyChecking=no "\${SSH_USER}@${params.SERVER_ADDRESS}" << 'DEBUG_EOF'
+echo "1. Текущий пользователь:"
+whoami
+echo ""
+
+echo "2. Полная информация о пользователе (id):"
+id
+echo ""
+
+echo "3. Все группы пользователя:"
+groups
+echo ""
+
+echo "4. Текущая директория:"
+pwd
+echo ""
+
+echo "5. Домашняя директория:"
+echo \\\$HOME
+echo ""
+
+echo "6. Проверка sudo прав (без пароля):"
+sudo -n -l 2>&1 | head -20 || echo "Нет sudo прав или требуется пароль"
+echo ""
+
+echo "7. Проверка /dev/shm прав:"
+ls -lad /dev/shm/
+echo ""
+
+echo "8. Проверка существующей директории monitoring_secrets:"
+ls -lad /dev/shm/monitoring_secrets/ 2>/dev/null || echo "Директория не существует"
+echo ""
+
+echo "9. Переменные окружения SSH:"
+echo "USER=\\\$USER"
+echo "LOGNAME=\\\$LOGNAME"
+echo ""
+
+echo "10. Может ли пользователь выполнить sg без пароля (тест):"
+timeout 2 sg ${env.USER_SYS} -c 'echo SUCCESS: sg работает' 2>&1 || echo "FAILED: sg требует пароль или таймаут"
+echo ""
+
+echo "11. Может ли пользователь выполнить sudo sg:"
+sudo -n sg ${env.USER_SYS} -c 'echo SUCCESS: sudo sg работает' 2>&1 || echo "FAILED: sudo sg не работает"
+echo ""
+
+echo "12. Проверка членства в группе ${env.USER_SYS}:"
+groups | grep -q ${env.USER_SYS} && echo "SUCCESS: пользователь В группе ${env.USER_SYS}" || echo "WARNING: пользователь НЕ В группе ${env.USER_SYS}"
+echo ""
+DEBUG_EOF
+echo "========================================================================"
+echo ""
+""" : ''}
+
 echo "[INFO] Создание директории для секретов в /dev/shm (с активацией группы через sg)..."
 ssh -i "\${SSH_KEY}" -o StrictHostKeyChecking=no "\${SSH_USER}@${params.SERVER_ADDRESS}" \\
     "sg ${env.USER_SYS} -c 'sudo mkdir -p ${REMOTE_SECRETS_DIR} && sudo chmod 770 ${REMOTE_SECRETS_DIR} && sudo chown ${env.USER_CI}:${env.USER_SYS} ${REMOTE_SECRETS_DIR}'"
+
+${params.DEBUG ? """
+echo "[DEBUG] После создания директории:"
+ssh -i "\${SSH_KEY}" -o StrictHostKeyChecking=no "\${SSH_USER}@${params.SERVER_ADDRESS}" << 'DEBUG_EOF2'
+echo "  - Права на директорию:"
+ls -lad ${REMOTE_SECRETS_DIR}
+echo "  - Текущий пользователь может писать в неё:"
+test -w ${REMOTE_SECRETS_DIR} && echo "    ✓ YES" || echo "    ✗ NO"
+echo "  - Владелец директории:"
+stat -c "Owner: %U:%G (uid=%u gid=%g)" ${REMOTE_SECRETS_DIR}
+DEBUG_EOF2
+echo ""
+""" : ''}
 
 ${params.DEBUG ? 'echo "[DEBUG] Локальный файл secrets.json:"' : ''}
 ${params.DEBUG ? "ls -lh ${WORKSPACE_LOCAL}/secrets.json" : ''}
 
 echo "[INFO] Передача секретов через SSH pipe (с активацией группы через sg)..."
+${params.DEBUG ? """
+echo "[DEBUG] Перед передачей файла:"
+ssh -i "\${SSH_KEY}" -o StrictHostKeyChecking=no "\${SSH_USER}@${params.SERVER_ADDRESS}" << 'DEBUG_EOF3'
+echo "  - Текущий пользователь в sg контексте:"
+sg ${env.USER_SYS} -c 'whoami && id' 2>&1 | head -5 || echo "  sg не работает без sudo"
+echo "  - Через sudo sg:"
+sudo sg ${env.USER_SYS} -c 'whoami && id' 2>&1 | head -5 || echo "  sudo sg не работает"
+DEBUG_EOF3
+echo ""
+""" : ''}
+
 cat ${WORKSPACE_LOCAL}/secrets.json | ssh -i "\${SSH_KEY}" -o StrictHostKeyChecking=no "\${SSH_USER}@${params.SERVER_ADDRESS}" \\
     "sg ${env.USER_SYS} -c 'cat > ${REMOTE_SECRETS_DIR}/secrets.json'"
 
 ${params.DEBUG ? 'echo "[DEBUG] Удаленный файл secrets.json после копирования:"' : ''}
-${params.DEBUG ? "ssh -i \"\${SSH_KEY}\" -o StrictHostKeyChecking=no \"\${SSH_USER}@${params.SERVER_ADDRESS}\" \"sg ${env.USER_SYS} -c 'ls -lh ${REMOTE_SECRETS_DIR}/secrets.json'\"" : ''}
+${params.DEBUG ? """
+ssh -i "\${SSH_KEY}" -o StrictHostKeyChecking=no "\${SSH_USER}@${params.SERVER_ADDRESS}" << 'DEBUG_EOF4'
+echo "  - Существование файла:"
+ls -lh ${REMOTE_SECRETS_DIR}/secrets.json 2>&1 || echo "  Файл НЕ создан!"
+echo "  - Размер файла:"
+du -h ${REMOTE_SECRETS_DIR}/secrets.json 2>&1 || echo "  Не удалось проверить размер"
+echo "  - Владелец файла:"
+stat -c "Owner: %U:%G" ${REMOTE_SECRETS_DIR}/secrets.json 2>&1 || echo "  Не удалось проверить владельца"
+DEBUG_EOF4
+echo ""
+""" : ''}
 
 echo "[INFO] Установка финальных прав на директорию и файл секретов..."
 ssh -i "\${SSH_KEY}" -o StrictHostKeyChecking=no "\${SSH_USER}@${params.SERVER_ADDRESS}" \\
