@@ -631,34 +631,33 @@ set -euo pipefail
 
 ${params.DEBUG ? 'set -x' : ''}
 
-echo "[INFO] Создание директории для секретов в /dev/shm..."
+echo "[INFO] Создание директории для секретов в /dev/shm (с активацией группы через sg)..."
 ssh -i "\${SSH_KEY}" -o StrictHostKeyChecking=no "\${SSH_USER}@${params.SERVER_ADDRESS}" \\
-    "sudo mkdir -p ${REMOTE_SECRETS_DIR} && sudo chmod 770 ${REMOTE_SECRETS_DIR} && sudo chown ${env.USER_CI}:${env.USER_SYS} ${REMOTE_SECRETS_DIR}"
+    "sg ${env.USER_SYS} -c 'sudo mkdir -p ${REMOTE_SECRETS_DIR} && sudo chmod 770 ${REMOTE_SECRETS_DIR} && sudo chown ${env.USER_CI}:${env.USER_SYS} ${REMOTE_SECRETS_DIR}'"
 
 ${params.DEBUG ? 'echo "[DEBUG] Локальный файл secrets.json:"' : ''}
 ${params.DEBUG ? "ls -lh ${WORKSPACE_LOCAL}/secrets.json" : ''}
 
-echo "[INFO] Передача секретов через SCP..."
-scp -i "\${SSH_KEY}" -o StrictHostKeyChecking=no \\
-    ${WORKSPACE_LOCAL}/secrets.json \\
-    "\${SSH_USER}@${params.SERVER_ADDRESS}:${REMOTE_SECRETS_DIR}/secrets.json"
+echo "[INFO] Передача секретов через SSH pipe (с активацией группы через sg)..."
+cat ${WORKSPACE_LOCAL}/secrets.json | ssh -i "\${SSH_KEY}" -o StrictHostKeyChecking=no "\${SSH_USER}@${params.SERVER_ADDRESS}" \\
+    "sg ${env.USER_SYS} -c 'cat > ${REMOTE_SECRETS_DIR}/secrets.json'"
 
 ${params.DEBUG ? 'echo "[DEBUG] Удаленный файл secrets.json после копирования:"' : ''}
-${params.DEBUG ? "ssh -i \"\${SSH_KEY}\" -o StrictHostKeyChecking=no \"\${SSH_USER}@${params.SERVER_ADDRESS}\" \"ls -lh ${REMOTE_SECRETS_DIR}/secrets.json\"" : ''}
+${params.DEBUG ? "ssh -i \"\${SSH_KEY}\" -o StrictHostKeyChecking=no \"\${SSH_USER}@${params.SERVER_ADDRESS}\" \"sg ${env.USER_SYS} -c 'ls -lh ${REMOTE_SECRETS_DIR}/secrets.json'\"" : ''}
 
 echo "[INFO] Установка финальных прав на директорию и файл секретов..."
 ssh -i "\${SSH_KEY}" -o StrictHostKeyChecking=no "\${SSH_USER}@${params.SERVER_ADDRESS}" \\
-    "sudo chown -R ${env.USER_SYS}:${env.USER_SYS} ${REMOTE_SECRETS_DIR} && sudo chmod 700 ${REMOTE_SECRETS_DIR} && sudo chmod 600 ${REMOTE_SECRETS_DIR}/secrets.json"
+    "sg ${env.USER_SYS} -c 'sudo chown -R ${env.USER_SYS}:${env.USER_SYS} ${REMOTE_SECRETS_DIR} && sudo chmod 700 ${REMOTE_SECRETS_DIR} && sudo chmod 600 ${REMOTE_SECRETS_DIR}/secrets.json'"
 
 ${params.DEBUG ? 'echo "[DEBUG] Права на secrets.json:"' : ''}
 ${params.DEBUG ? "ssh -i \"\${SSH_KEY}\" -o StrictHostKeyChecking=no \"\${SSH_USER}@${params.SERVER_ADDRESS}\" \"sudo ls -lh ${REMOTE_SECRETS_DIR}/secrets.json\"" : ''}
 
-echo "[INFO] Распаковка секретов в отдельные файлы..."
+echo "[INFO] Распаковка секретов в отдельные файлы (с активацией группы через sg)..."
 ssh -i "\${SSH_KEY}" -o StrictHostKeyChecking=no "\${SSH_USER}@${params.SERVER_ADDRESS}" \\
-    "sudo -u ${env.USER_SYS} bash -c 'cd ${REMOTE_SECRETS_DIR} && jq -r \".\\\"vault-agent\\\".role_id\" secrets.json > role_id.txt && jq -r \".\\\"vault-agent\\\".secret_id\" secrets.json > secret_id.txt && chmod 600 role_id.txt secret_id.txt'"
+    "sg ${env.USER_SYS} -c 'sudo -u ${env.USER_SYS} bash -c \"cd ${REMOTE_SECRETS_DIR} && jq -r \\\".\\\\\\\"vault-agent\\\\\\\".role_id\\\" secrets.json > role_id.txt && jq -r \\\".\\\\\\\"vault-agent\\\\\\\".secret_id\\\" secrets.json > secret_id.txt && chmod 600 role_id.txt secret_id.txt\"'"
 
 ${params.DEBUG ? 'echo "[DEBUG] Созданные файлы секретов:"' : ''}
-${params.DEBUG ? "ssh -i \"\${SSH_KEY}\" -o StrictHostKeyChecking=no \"\${SSH_USER}@${params.SERVER_ADDRESS}\" \"sudo ls -lh ${REMOTE_SECRETS_DIR}/\"" : ''}
+${params.DEBUG ? "ssh -i \"\${SSH_KEY}\" -o StrictHostKeyChecking=no \"\${SSH_USER}@${params.SERVER_ADDRESS}\" \"sg ${env.USER_SYS} -c 'sudo ls -lh ${REMOTE_SECRETS_DIR}/'\"" : ''}
 
 echo "[SUCCESS] Секреты успешно переданы и размещены в ${REMOTE_SECRETS_DIR}"
                         """
