@@ -473,7 +473,7 @@ ${params.DEBUG ? 'set -x' : ''}
 
 echo "[INFO] Создание директории для секретов в /dev/shm..."
 ssh -i "\${SSH_KEY}" -o StrictHostKeyChecking=no "\${SSH_USER}@${params.SERVER_ADDRESS}" \\
-    "sudo mkdir -p ${REMOTE_SECRETS_DIR} && sudo chmod 700 ${REMOTE_SECRETS_DIR} && sudo chown monitoring_svc:monitoring ${REMOTE_SECRETS_DIR}"
+    "sudo mkdir -p ${REMOTE_SECRETS_DIR} && sudo chmod 700 ${REMOTE_SECRETS_DIR} && sudo chown ${env.USER_SYS}:${env.USER_SYS} ${REMOTE_SECRETS_DIR}"
 
 ${params.DEBUG ? 'echo "[DEBUG] Локальный файл secrets.json:"' : ''}
 ${params.DEBUG ? "ls -lh ${WORKSPACE_LOCAL}/secrets.json" : ''}
@@ -488,14 +488,14 @@ ${params.DEBUG ? "ssh -i \"\${SSH_KEY}\" -o StrictHostKeyChecking=no \"\${SSH_US
 
 echo "[INFO] Установка прав на файл секретов..."
 ssh -i "\${SSH_KEY}" -o StrictHostKeyChecking=no "\${SSH_USER}@${params.SERVER_ADDRESS}" \\
-    "sudo chown monitoring_svc:monitoring ${REMOTE_SECRETS_DIR}/secrets.json && sudo chmod 600 ${REMOTE_SECRETS_DIR}/secrets.json"
+    "sudo chown ${env.USER_SYS}:${env.USER_SYS} ${REMOTE_SECRETS_DIR}/secrets.json && sudo chmod 600 ${REMOTE_SECRETS_DIR}/secrets.json"
 
 ${params.DEBUG ? 'echo "[DEBUG] Права на secrets.json:"' : ''}
 ${params.DEBUG ? "ssh -i \"\${SSH_KEY}\" -o StrictHostKeyChecking=no \"\${SSH_USER}@${params.SERVER_ADDRESS}\" \"sudo ls -lh ${REMOTE_SECRETS_DIR}/secrets.json\"" : ''}
 
 echo "[INFO] Распаковка секретов в отдельные файлы..."
 ssh -i "\${SSH_KEY}" -o StrictHostKeyChecking=no "\${SSH_USER}@${params.SERVER_ADDRESS}" \\
-    "sudo -u monitoring_svc bash -c 'cd ${REMOTE_SECRETS_DIR} && jq -r \".\\\"vault-agent\\\".role_id\" secrets.json > role_id.txt && jq -r \".\\\"vault-agent\\\".secret_id\" secrets.json > secret_id.txt && chmod 600 role_id.txt secret_id.txt'"
+    "sudo -u ${env.USER_SYS} bash -c 'cd ${REMOTE_SECRETS_DIR} && jq -r \".\\\"vault-agent\\\".role_id\" secrets.json > role_id.txt && jq -r \".\\\"vault-agent\\\".secret_id\" secrets.json > secret_id.txt && chmod 600 role_id.txt secret_id.txt'"
 
 ${params.DEBUG ? 'echo "[DEBUG] Созданные файлы секретов:"' : ''}
 ${params.DEBUG ? "ssh -i \"\${SSH_KEY}\" -o StrictHostKeyChecking=no \"\${SSH_USER}@${params.SERVER_ADDRESS}\" \"sudo ls -lh ${REMOTE_SECRETS_DIR}/\"" : ''}
@@ -626,9 +626,9 @@ echo "[SUCCESS] Секреты успешно переданы и размеще
 echo "=========================================="
 echo "ПРОВЕРКА СТАТУСА СЕРВИСОВ:"
 echo "=========================================="
-sudo -u monitoring_svc systemctl --user status prometheus | grep "Active:"
-sudo -u monitoring_svc systemctl --user status grafana | grep "Active:"
-sudo -u monitoring_svc systemctl --user status harvest | grep "Active:"
+sudo -u ${env.USER_SYS} systemctl --user status prometheus | grep "Active:"
+sudo -u ${env.USER_SYS} systemctl --user status grafana | grep "Active:"
+sudo -u ${env.USER_SYS} systemctl --user status harvest | grep "Active:"
 echo ""
 echo "=========================================="
 echo "ПРОВЕРКА ПОРТОВ:"
