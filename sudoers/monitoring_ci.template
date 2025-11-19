@@ -20,6 +20,60 @@
 {{USER_CI}} ALL=({{USER_SYS}}) NOPASSWD: ALL
 
 # ==============================================================================
+# ПРАВА ДЛЯ РАБОТЫ С СЕКРЕТАМИ В /dev/shm ОТ ИМЕНИ {{USER_SYS}}
+# Эти права позволяют ТУЗ выполнять команды от имени СУЗ с группой СУЗ
+# Используется в Jenkins Pipeline для безопасной передачи секретов
+# ==============================================================================
+
+# Создание директории секретов от имени СУЗ
+{{USER_CI}} ALL=({{USER_SYS}}:{{USER_SYS}}) NOPASSWD: /usr/bin/mkdir -p /dev/shm/monitoring_secrets
+
+# Установка прав на директорию секретов от имени СУЗ
+{{USER_CI}} ALL=({{USER_SYS}}:{{USER_SYS}}) NOPASSWD: /usr/bin/chmod 700 /dev/shm/monitoring_secrets
+{{USER_CI}} ALL=({{USER_SYS}}:{{USER_SYS}}) NOPASSWD: /usr/bin/chmod 770 /dev/shm/monitoring_secrets
+
+# Изменение владельца директории секретов от имени СУЗ
+{{USER_CI}} ALL=({{USER_SYS}}:{{USER_SYS}}) NOPASSWD: /usr/bin/chown -R {{USER_CI}}\:{{USER_SYS}} /dev/shm/monitoring_secrets
+{{USER_CI}} ALL=({{USER_SYS}}:{{USER_SYS}}) NOPASSWD: /usr/bin/chown -R {{USER_SYS}}\:{{USER_SYS}} /dev/shm/monitoring_secrets
+{{USER_CI}} ALL=({{USER_SYS}}:{{USER_SYS}}) NOPASSWD: /usr/bin/chown {{USER_CI}}\:{{USER_SYS}} /dev/shm/monitoring_secrets
+{{USER_CI}} ALL=({{USER_SYS}}:{{USER_SYS}}) NOPASSWD: /usr/bin/chown {{USER_SYS}}\:{{USER_SYS}} /dev/shm/monitoring_secrets
+
+# Установка прав на файлы секретов от имени СУЗ
+{{USER_CI}} ALL=({{USER_SYS}}:{{USER_SYS}}) NOPASSWD: /usr/bin/chmod 600 /dev/shm/monitoring_secrets/role_id.txt
+{{USER_CI}} ALL=({{USER_SYS}}:{{USER_SYS}}) NOPASSWD: /usr/bin/chmod 600 /dev/shm/monitoring_secrets/secret_id.txt
+{{USER_CI}} ALL=({{USER_SYS}}:{{USER_SYS}}) NOPASSWD: /usr/bin/chmod 600 /dev/shm/monitoring_secrets/secrets.json
+{{USER_CI}} ALL=({{USER_SYS}}:{{USER_SYS}}) NOPASSWD: /usr/bin/chmod 640 /dev/shm/monitoring_secrets/secrets.json
+
+# Создание файлов секретов через bash от имени СУЗ
+{{USER_CI}} ALL=({{USER_SYS}}:{{USER_SYS}}) NOPASSWD: /usr/bin/bash -c *
+{{USER_CI}} ALL=({{USER_SYS}}:{{USER_SYS}}) NOPASSWD: /usr/bin/bash
+
+# Чтение содержимого файлов в /dev/shm/monitoring_secrets от имени СУЗ
+{{USER_CI}} ALL=({{USER_SYS}}:{{USER_SYS}}) NOPASSWD: /usr/bin/cat /dev/shm/monitoring_secrets/*
+{{USER_CI}} ALL=({{USER_SYS}}:{{USER_SYS}}) NOPASSWD: /usr/bin/ls -lh /dev/shm/monitoring_secrets
+{{USER_CI}} ALL=({{USER_SYS}}:{{USER_SYS}}) NOPASSWD: /usr/bin/ls -lh /dev/shm/monitoring_secrets/*
+{{USER_CI}} ALL=({{USER_SYS}}:{{USER_SYS}}) NOPASSWD: /usr/bin/ls -lad /dev/shm/monitoring_secrets
+
+# Управление systemd user services от имени СУЗ
+{{USER_CI}} ALL=({{USER_SYS}}:{{USER_SYS}}) NOPASSWD: /usr/bin/systemctl --user daemon-reload
+{{USER_CI}} ALL=({{USER_SYS}}:{{USER_SYS}}) NOPASSWD: NOEXEC: /usr/bin/systemctl --user status grafana
+{{USER_CI}} ALL=({{USER_SYS}}:{{USER_SYS}}) NOPASSWD: NOEXEC: /usr/bin/systemctl --user status harvest
+{{USER_CI}} ALL=({{USER_SYS}}:{{USER_SYS}}) NOPASSWD: NOEXEC: /usr/bin/systemctl --user status prometheus
+{{USER_CI}} ALL=({{USER_SYS}}:{{USER_SYS}}) NOPASSWD: NOEXEC: /usr/bin/systemctl --user status vault-agent-monitoring
+{{USER_CI}} ALL=({{USER_SYS}}:{{USER_SYS}}) NOPASSWD: /usr/bin/systemctl --user start grafana
+{{USER_CI}} ALL=({{USER_SYS}}:{{USER_SYS}}) NOPASSWD: /usr/bin/systemctl --user start harvest
+{{USER_CI}} ALL=({{USER_SYS}}:{{USER_SYS}}) NOPASSWD: /usr/bin/systemctl --user start prometheus
+{{USER_CI}} ALL=({{USER_SYS}}:{{USER_SYS}}) NOPASSWD: /usr/bin/systemctl --user start vault-agent-monitoring
+{{USER_CI}} ALL=({{USER_SYS}}:{{USER_SYS}}) NOPASSWD: /usr/bin/systemctl --user stop grafana
+{{USER_CI}} ALL=({{USER_SYS}}:{{USER_SYS}}) NOPASSWD: /usr/bin/systemctl --user stop harvest
+{{USER_CI}} ALL=({{USER_SYS}}:{{USER_SYS}}) NOPASSWD: /usr/bin/systemctl --user stop prometheus
+{{USER_CI}} ALL=({{USER_SYS}}:{{USER_SYS}}) NOPASSWD: /usr/bin/systemctl --user stop vault-agent-monitoring
+{{USER_CI}} ALL=({{USER_SYS}}:{{USER_SYS}}) NOPASSWD: /usr/bin/systemctl --user restart grafana
+{{USER_CI}} ALL=({{USER_SYS}}:{{USER_SYS}}) NOPASSWD: /usr/bin/systemctl --user restart harvest
+{{USER_CI}} ALL=({{USER_SYS}}:{{USER_SYS}}) NOPASSWD: /usr/bin/systemctl --user restart prometheus
+{{USER_CI}} ALL=({{USER_SYS}}:{{USER_SYS}}) NOPASSWD: /usr/bin/systemctl --user restart vault-agent-monitoring
+
+# ==============================================================================
 # УПРАВЛЕНИЕ ПРАВАМИ НА ДИРЕКТОРИИ (отсортировано по алфавиту)
 # ==============================================================================
 
