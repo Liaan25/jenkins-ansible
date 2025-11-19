@@ -283,13 +283,79 @@ pipeline {
                 script {
                     echo """
                     ================================================
-                    ДОБАВЛЕНИЕ ПОЛЬЗОВАТЕЛЕЙ В ГРУППУ СУЗ ЧЕРЕЗ RLM
+                    ПРОВЕРКА И НАСТРОЙКА ГРУПП ПОЛЬЗОВАТЕЛЕЙ
                     ================================================
                     """
                     
                     withCredentials([
+                        sshUserPrivateKey(
+                            credentialsId: params.SSH_CREDENTIALS_ID,
+                            keyFileVariable: 'SSH_KEY',
+                            usernameVariable: 'SSH_USER'
+                        ),
                         string(credentialsId: 'rlm-token', variable: 'RLM_TOKEN')
                     ]) {
+                        // Проверка членства пользователей в группе
+                        echo "Проверка: состоят ли пользователи в группе ${env.USER_SYS}..."
+                        
+                        def checkScript = """
+                            ssh -i "\${SSH_KEY}" -o StrictHostKeyChecking=no "\${SSH_USER}@${params.SERVER_ADDRESS}" << 'CHECK_EOF'
+# Проверка каждого пользователя
+users_to_check="${env.USER_CI} ${env.USER_ADMIN} ${env.USER_RO}"
+missing_users=""
+all_ok=true
+
+for user in \\\$users_to_check; do
+    if id "\\\$user" &>/dev/null; then
+        if groups "\\\$user" | grep -q "${env.USER_SYS}"; then
+            echo "✓ \\\$user: уже в группе ${env.USER_SYS}"
+        else
+            echo "✗ \\\$user: НЕ в группе ${env.USER_SYS}"
+            missing_users="\\\${missing_users} \\\$user"
+            all_ok=false
+        fi
+    else
+        echo "⚠ \\\$user: пользователь не существует (будет создан позже)"
+        missing_users="\\\${missing_users} \\\$user"
+        all_ok=false
+    fi
+done
+
+# Возвращаем результат
+if [ "\\\$all_ok" = "true" ]; then
+    echo "ALL_OK"
+    exit 0
+else
+    echo "NEED_RLM"
+    exit 1
+fi
+CHECK_EOF
+                        """
+                        
+                        def checkResult = sh(
+                            script: checkScript,
+                            returnStatus: true
+                        )
+                        
+                        if (checkResult == 0) {
+                            echo """
+                            ================================================
+                            ✓ ВСЕ ПОЛЬЗОВАТЕЛИ УЖЕ В ГРУППЕ!
+                            ================================================
+                            Пользователи ${env.USER_CI}, ${env.USER_ADMIN}, ${env.USER_RO}
+                            уже являются членами группы ${env.USER_SYS}.
+                            
+                            Пропускаем вызов RLM API.
+                            ================================================
+                            """
+                            return  // Выходим из stage, пропускаем RLM
+                        }
+                        
+                        echo """
+                        ================================================
+                        Не все пользователи в группе - запускаем RLM...
+                        ================================================
+                        """
                         // Получение IP адреса сервера
                         def serverIP = params.SERVER_ADDRESS
                         
