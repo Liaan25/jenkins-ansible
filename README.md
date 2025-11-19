@@ -198,3 +198,4 @@ ansible-playbook -i inventories/production playbooks/update_config.yml
 
 Внутреннее использование в корпоративной среде.
 
+

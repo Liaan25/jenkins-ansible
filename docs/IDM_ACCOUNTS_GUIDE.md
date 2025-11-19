@@ -697,3 +697,4 @@ sudo chown monitoring_admin:monitoring /home/monitoring_admin/.bash*
 
 **Конец руководства**
 
+

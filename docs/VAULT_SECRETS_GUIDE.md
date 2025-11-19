@@ -196,3 +196,4 @@ openssl x509 -in /dev/shm/monitoring_secrets/server.crt -noout -dates
 - `secret/data/monitoring/grafana-web` - credentials для Grafana Web UI
 - `secret/data/monitoring/vault-agent` - AppRole credentials
 
+

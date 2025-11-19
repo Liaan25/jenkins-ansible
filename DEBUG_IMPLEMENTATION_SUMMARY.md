@@ -372,3 +372,4 @@ curl -X POST "https://jenkins.example.com/job/deploy_monitoring/buildWithParamet
 **Версия Jenkinsfile:** 2.0 (с DEBUG)  
 **Статус:** ✅ Готово к использованию
 
+

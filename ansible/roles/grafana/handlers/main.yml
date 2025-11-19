@@ -22,3 +22,4 @@
   environment:
     XDG_RUNTIME_DIR: "/run/user/{{ lookup('pipe', 'id -u ' + monitoring_service_user) }}"
 
+

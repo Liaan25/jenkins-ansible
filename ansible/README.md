@@ -496,3 +496,4 @@ ansible-playbook playbooks/deploy_monitoring.yml --tags "config" --skip-tags "se
 - [Инструкция по Vault](../docs/VAULT_SECRETS_GUIDE.md)
 - [Ansible Documentation](https://docs.ansible.com/)
 
+

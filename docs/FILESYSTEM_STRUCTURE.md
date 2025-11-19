@@ -188,3 +188,4 @@ ls -la /dev/shm/ | grep monitoring
 
 **Легенда**: r=read, w=write, x=execute, -=нет доступа
 
+

@@ -95,3 +95,4 @@
   when: vault_creds.results | selectattr('stat.exists', 'equalto', true) | list | length == 2
   tags: [wait]
 
+

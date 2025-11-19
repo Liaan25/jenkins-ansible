@@ -231,3 +231,4 @@ fix: Replace File() check with shell test for secrets.json validation
 **Версия:** Hotfix 1.0  
 **Статус:** ✅ Готово к тестированию
 
+

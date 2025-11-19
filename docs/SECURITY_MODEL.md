@@ -1072,3 +1072,4 @@ sudo -u monitoring_svc systemctl --user restart prometheus grafana harvest
 
 Данная модель безопасности обеспечивает защиту системы мониторинга на всех уровнях и соответствует корпоративным требованиям Enterprise-среды.
 
+
