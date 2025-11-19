@@ -42,9 +42,9 @@
   notify: restart prometheus
   tags: [config]
 
-- name: "Prometheus | Копирование systemd unit"
-  copy:
-    src: "{{ playbook_dir }}/../../systemd/prometheus.service"
+- name: "Prometheus | Развертывание systemd unit из template"
+  template:
+    src: prometheus.service.j2
     dest: "{{ systemd_user_dir }}/prometheus.service"
     owner: "{{ monitoring_service_user }}"
     group: "{{ monitoring_group }}"

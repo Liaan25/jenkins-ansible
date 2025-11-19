@@ -54,9 +54,9 @@
   notify: restart grafana
   tags: [config, provisioning]
 
-- name: "Grafana | Копирование systemd unit"
-  copy:
-    src: "{{ playbook_dir }}/../../systemd/grafana.service"
+- name: "Grafana | Развертывание systemd unit из template"
+  template:
+    src: grafana.service.j2
     dest: "{{ systemd_user_dir }}/grafana.service"
     owner: "{{ monitoring_service_user }}"
     group: "{{ monitoring_group }}"

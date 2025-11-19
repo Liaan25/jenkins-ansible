@@ -1,6 +1,14 @@
 #!/bin/bash
 # Скрипт управления секретами в /dev/shm
-# Должен запускаться от имени monitoring_svc
+#
+# Использование:
+#   ./manage_secrets.sh [command] [USER_SYS]
+#
+# Пример (статическое имя):
+#   ./manage_secrets.sh create
+#
+# Пример (динамическое имя):
+#   ./manage_secrets.sh create CI10742292-lnx-mon_sys
 
 set -euo pipefail
 
@@ -9,7 +17,7 @@ set -euo pipefail
 # ==============================================================================
 
 SECRETS_DIR="/dev/shm/monitoring_secrets"
-REQUIRED_USER="monitoring_svc"
+REQUIRED_USER="${2:-monitoring_svc}"  # Можно переопределить вторым параметром
 VAULT_BUNDLE="/opt/vault/certs/server_bundle.pem"
 
 # Цвета для вывода

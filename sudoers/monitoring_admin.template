@@ -1,0 +1,78 @@
+# Sudoers file for {{USER_ADMIN}} (Привилегированная УЗ для администрирования)
+# 
+# ВАЖНО: Этот файл должен быть размещен в /etc/sudoers.d/{{USER_ADMIN}}
+# После размещения проверить синтаксис: sudo visudo -c -f /etc/sudoers.d/{{USER_ADMIN}}
+#
+# Создание УЗ и запрос прав выполняется через IDM (см. docs/IDM_ACCOUNTS_GUIDE.md)
+# Полная документация: docs/SUDOERS_GUIDE.md
+#
+# Пользователь: {{USER_ADMIN}}
+# Тип: ПУЗ (Привилегированная учетная запись)
+# Назначение: Администрирование системы, управление сервисами, диагностика
+# Права: Средние (без деплоя, но с управлением сервисами)
+#
+
+# ==============================================================================
+# ПЕРЕКЛЮЧЕНИЕ НА ДРУГОГО ПОЛЬЗОВАТЕЛЯ
+# ==============================================================================
+
+# Возможность выполнения команд от имени {{USER_SYS}}
+{{USER_ADMIN}} ALL=({{USER_SYS}}) NOPASSWD: ALL
+
+# ==============================================================================
+# СОЗДАНИЕ БЭКАПОВ (отсортировано по алфавиту)
+# ==============================================================================
+
+{{USER_ADMIN}} ALL=(ALL\:ALL) NOPASSWD: /usr/bin/tar -czf /opt/monitoring/backups/config_*.tar.gz /opt/monitoring/config/
+
+# ==============================================================================
+# ДИАГНОСТИЧЕСКИЕ КОМАНДЫ (отсортировано по алфавиту)
+# ==============================================================================
+
+{{USER_ADMIN}} ALL=(ALL\:ALL) NOPASSWD: /usr/bin/df -h
+{{USER_ADMIN}} ALL=(ALL\:ALL) NOPASSWD: /usr/bin/ps aux
+{{USER_ADMIN}} ALL=(ALL\:ALL) NOPASSWD: /usr/bin/ss -tlnp
+{{USER_ADMIN}} ALL=(ALL\:ALL) NOPASSWD: /usr/sbin/lsof -i TCP\:12990
+{{USER_ADMIN}} ALL=(ALL\:ALL) NOPASSWD: /usr/sbin/lsof -i TCP\:12991
+{{USER_ADMIN}} ALL=(ALL\:ALL) NOPASSWD: /usr/sbin/lsof -i TCP\:3000
+{{USER_ADMIN}} ALL=(ALL\:ALL) NOPASSWD: /usr/sbin/lsof -i TCP\:9090
+
+# ==============================================================================
+# ПРОСМОТР ЛОГОВ (отсортировано по алфавиту)
+# ==============================================================================
+
+{{USER_ADMIN}} ALL=(ALL\:ALL) NOPASSWD: NOEXEC: /usr/bin/journalctl --user -u grafana
+{{USER_ADMIN}} ALL=(ALL\:ALL) NOPASSWD: NOEXEC: /usr/bin/journalctl --user -u harvest
+{{USER_ADMIN}} ALL=(ALL\:ALL) NOPASSWD: NOEXEC: /usr/bin/journalctl --user -u prometheus
+{{USER_ADMIN}} ALL=(ALL\:ALL) NOPASSWD: NOEXEC: /usr/bin/journalctl --user -u vault-agent-monitoring
+
+# ==============================================================================
+# УПРАВЛЕНИЕ USER SYSTEMD UNITS (отсортировано по алфавиту)
+# ==============================================================================
+
+{{USER_ADMIN}} ALL=(ALL\:ALL) NOPASSWD: /usr/bin/systemctl --user daemon-reload
+{{USER_ADMIN}} ALL=(ALL\:ALL) NOPASSWD: /usr/bin/systemctl --user is-active grafana
+{{USER_ADMIN}} ALL=(ALL\:ALL) NOPASSWD: /usr/bin/systemctl --user is-active harvest
+{{USER_ADMIN}} ALL=(ALL\:ALL) NOPASSWD: /usr/bin/systemctl --user is-active prometheus
+{{USER_ADMIN}} ALL=(ALL\:ALL) NOPASSWD: /usr/bin/systemctl --user is-active vault-agent-monitoring
+{{USER_ADMIN}} ALL=(ALL\:ALL) NOPASSWD: /usr/bin/systemctl --user restart grafana
+{{USER_ADMIN}} ALL=(ALL\:ALL) NOPASSWD: /usr/bin/systemctl --user restart harvest
+{{USER_ADMIN}} ALL=(ALL\:ALL) NOPASSWD: /usr/bin/systemctl --user restart prometheus
+{{USER_ADMIN}} ALL=(ALL\:ALL) NOPASSWD: /usr/bin/systemctl --user restart vault-agent-monitoring
+{{USER_ADMIN}} ALL=(ALL\:ALL) NOPASSWD: /usr/bin/systemctl --user start grafana
+{{USER_ADMIN}} ALL=(ALL\:ALL) NOPASSWD: /usr/bin/systemctl --user start harvest
+{{USER_ADMIN}} ALL=(ALL\:ALL) NOPASSWD: /usr/bin/systemctl --user start prometheus
+{{USER_ADMIN}} ALL=(ALL\:ALL) NOPASSWD: /usr/bin/systemctl --user start vault-agent-monitoring
+{{USER_ADMIN}} ALL=(ALL\:ALL) NOPASSWD: NOEXEC: /usr/bin/systemctl --user status grafana
+{{USER_ADMIN}} ALL=(ALL\:ALL) NOPASSWD: NOEXEC: /usr/bin/systemctl --user status harvest
+{{USER_ADMIN}} ALL=(ALL\:ALL) NOPASSWD: NOEXEC: /usr/bin/systemctl --user status prometheus
+{{USER_ADMIN}} ALL=(ALL\:ALL) NOPASSWD: NOEXEC: /usr/bin/systemctl --user status vault-agent-monitoring
+{{USER_ADMIN}} ALL=(ALL\:ALL) NOPASSWD: /usr/bin/systemctl --user stop grafana
+{{USER_ADMIN}} ALL=(ALL\:ALL) NOPASSWD: /usr/bin/systemctl --user stop harvest
+{{USER_ADMIN}} ALL=(ALL\:ALL) NOPASSWD: /usr/bin/systemctl --user stop prometheus
+{{USER_ADMIN}} ALL=(ALL\:ALL) NOPASSWD: /usr/bin/systemctl --user stop vault-agent-monitoring
+
+# ==============================================================================
+# КОНЕЦ ФАЙЛА
+# ==============================================================================
+

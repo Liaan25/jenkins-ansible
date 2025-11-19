@@ -179,18 +179,6 @@ pipeline {
                         """
                     }
                     
-                    echo """
-                    ================================================
-                    ВАЛИДАЦИЯ ПАРАМЕТРОВ
-                    ================================================
-                    Целевой сервер: ${params.SERVER_ADDRESS}
-                    Namespace: ${params.NAMESPACE_CI}
-                    NetApp кластер: ${params.NETAPP_API_ADDR}
-                    Метод развертывания: ${params.DEPLOYMENT_METHOD}
-                    DEBUG режим: ${params.DEBUG}
-                    ================================================
-                    """
-                    
                     // Проверка обязательных параметров
                     def required_params = [
                         'SERVER_ADDRESS',
@@ -209,7 +197,80 @@ pipeline {
                         error("ОШИБКА: Не указаны обязательные параметры: ${missing.join(', ')}")
                     }
                     
-                    echo "✓ Все обязательные параметры указаны"
+                    // ==========================================
+                    // ИЗВЛЕЧЕНИЕ KAE_STEND ИЗ NAMESPACE_CI
+                    // ==========================================
+                    
+                    // Валидация формата NAMESPACE_CI
+                    if (!params.NAMESPACE_CI.contains('_')) {
+                        error("ОШИБКА: NAMESPACE_CI должен содержать разделитель '_' (формат: PREFIX_SUFFIX)\nПример: CI04523276_CI10742292")
+                    }
+                    
+                    // Извлечение KAE_STEND (часть после последнего '_')
+                    def namespaceParts = params.NAMESPACE_CI.split('_')
+                    env.KAE_STEND = namespaceParts[-1]
+                    
+                    // Валидация KAE_STEND (только буквы, цифры, дефис)
+                    if (!env.KAE_STEND.matches(/^[a-zA-Z0-9-]+$/)) {
+                        error("ОШИБКА: KAE_STEND содержит недопустимые символы: '${env.KAE_STEND}'\nДопустимы только: буквы, цифры, дефис")
+                    }
+                    
+                    // Проверка длины KAE_STEND
+                    if (env.KAE_STEND.length() < 3) {
+                        error("ОШИБКА: KAE_STEND слишком короткий (минимум 3 символа): '${env.KAE_STEND}'")
+                    }
+                    
+                    if (env.KAE_STEND.length() > 20) {
+                        error("ОШИБКА: KAE_STEND слишком длинный (максимум 20 символов): '${env.KAE_STEND}'")
+                    }
+                    
+                    // ==========================================
+                    // ФОРМИРОВАНИЕ ИМЕН ПОЛЬЗОВАТЕЛЕЙ
+                    // ==========================================
+                    
+                    // Формирование динамических имен пользователей
+                    env.USER_SYS = "${env.KAE_STEND}-lnx-mon_sys"
+                    env.USER_ADMIN = "${env.KAE_STEND}-lnx-mon_admin"
+                    env.USER_CI = "${env.KAE_STEND}-lnx-mon_ci"
+                    env.USER_RO = "${env.KAE_STEND}-lnx-mon_ro"
+                    
+                    // Валидация финальных имен пользователей (требования IDM/Linux)
+                    // Формат: начинается с буквы или цифры, может содержать буквы, цифры, _, -, max 32 символа
+                    def userNamePattern = /^[a-zA-Z0-9][a-zA-Z0-9_-]{0,30}[a-zA-Z0-9]$/
+                    def invalidUsers = []
+                    
+                    [env.USER_SYS, env.USER_ADMIN, env.USER_CI, env.USER_RO].each { userName ->
+                        if (!userName.matches(userNamePattern)) {
+                            invalidUsers.add(userName)
+                        }
+                        if (userName.length() > 32) {
+                            invalidUsers.add("${userName} (длина: ${userName.length()} > 32)")
+                        }
+                    }
+                    
+                    if (invalidUsers.size() > 0) {
+                        error("ОШИБКА: Недопустимые имена пользователей:\n${invalidUsers.join('\n')}\nТребования: 3-32 символа, буквы/цифры/_/-")
+                    }
+                    
+                    // Вывод результатов валидации
+                    echo """
+                    ================================================
+                    ✓ ВАЛИДАЦИЯ УСПЕШНА
+                    ================================================
+                    Целевой сервер: ${params.SERVER_ADDRESS}
+                    Namespace: ${params.NAMESPACE_CI}
+                    KAE Стенд: ${env.KAE_STEND}
+                    NetApp кластер: ${params.NETAPP_API_ADDR}
+                    Метод развертывания: ${params.DEPLOYMENT_METHOD}
+                    DEBUG режим: ${params.DEBUG}
+                    
+                    Пользователи (динамически сформированы):
+                    - Сервисная (СУЗ): ${env.USER_SYS}
+                    - Администратор (ПУЗ): ${env.USER_ADMIN}
+                    - CI/CD (ТУЗ): ${env.USER_CI}
+                    - ReadOnly: ${env.USER_RO}
+                    ================================================
+                    """
                 }
             }
         }
@@ -356,7 +417,12 @@ pipeline {
 ${params.SERVER_ADDRESS} ansible_host=${params.SERVER_ADDRESS}
 
 [monitoring_servers:vars]
-ansible_user=monitoring_ci
+ansible_user=${env.USER_CI}
+kae_stend=${env.KAE_STEND}
+user_sys=${env.USER_SYS}
+user_admin=${env.USER_ADMIN}
+user_ci=${env.USER_CI}
+user_ro=${env.USER_RO}
 netapp_api_addr=${params.NETAPP_API_ADDR}
 prometheus_port=${params.PROMETHEUS_PORT}
 grafana_port=${params.GRAFANA_PORT}
@@ -364,7 +430,9 @@ admin_email=${params.ADMIN_EMAIL}
 vault_namespace=${params.NAMESPACE_CI}
                         """
                         
-                        echo "✓ Ansible проект подготовлен"
+                        echo "✓ Ansible проект подготовлен с динамическими пользователями"
+                        echo "  - ansible_user: ${env.USER_CI}"
+                        echo "  - kae_stend: ${env.KAE_STEND}"
                     }
                 }
             }

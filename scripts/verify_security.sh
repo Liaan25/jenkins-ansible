@@ -1,12 +1,28 @@
 #!/bin/bash
 # Скрипт проверки соответствия требованиям безопасности
+#
+# Использование:
+#   ./verify_security.sh [USER_SYS] [USER_ADMIN] [USER_CI] [USER_RO]
+#
+# Пример (статические имена):
+#   ./verify_security.sh
+#
+# Пример (динамические имена):
+#   ./verify_security.sh CI10742292-lnx-mon_sys CI10742292-lnx-mon_admin CI10742292-lnx-mon_ci CI10742292-lnx-mon_ro
 
 set -euo pipefail
+
+# Имена пользователей (можно переопределить параметрами)
+USER_SYS="${1:-monitoring_svc}"
+USER_ADMIN="${2:-monitoring_admin}"
+USER_CI="${3:-monitoring_ci}"
+USER_RO="${4:-monitoring_ro}"
 
 # Цвета
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
 NC='\033[0m'
 
 PASS_COUNT=0
@@ -31,34 +47,45 @@ check_warn() {
 echo "=================================================="
 echo "ПРОВЕРКА БЕЗОПАСНОСТИ СИСТЕМЫ МОНИТОРИНГА"
 echo "=================================================="
+echo -e "${BLUE}Используемые пользователи:${NC}"
+echo "  Сервисная (СУЗ): $USER_SYS"
+echo "  Администратор (ПУЗ): $USER_ADMIN"
+echo "  CI/CD (ТУЗ): $USER_CI"
+echo "  ReadOnly: $USER_RO"
 echo ""
 
 # 1. Проверка учетных записей
 echo "[1] Проверка учетных записей..."
-if id monitoring_svc &>/dev/null; then
-    check_pass "УЗ monitoring_svc существует"
+if id "$USER_SYS" &>/dev/null; then
+    check_pass "УЗ $USER_SYS существует"
     
     # Проверка NoLogin
-    shell=$(getent passwd monitoring_svc | cut -d: -f7)
+    shell=$(getent passwd "$USER_SYS" | cut -d: -f7)
     if [[ "$shell" == "/sbin/nologin" ]] || [[ "$shell" == "/bin/false" ]]; then
-        check_pass "monitoring_svc имеет NoLogin shell: $shell"
+        check_pass "$USER_SYS имеет NoLogin shell: $shell"
     else
-        check_fail "monitoring_svc НЕ имеет NoLogin shell: $shell"
+        check_fail "$USER_SYS НЕ имеет NoLogin shell: $shell"
     fi
 else
-    check_fail "УЗ monitoring_svc НЕ существует"
+    check_fail "УЗ $USER_SYS НЕ существует"
 fi
 
-if id monitoring_admin &>/dev/null; then
-    check_pass "УЗ monitoring_admin существует"
+if id "$USER_ADMIN" &>/dev/null; then
+    check_pass "УЗ $USER_ADMIN существует"
 else
-    check_warn "УЗ monitoring_admin не существует"
+    check_warn "УЗ $USER_ADMIN не существует"
 fi
 
-if id monitoring_ci &>/dev/null; then
-    check_pass "УЗ monitoring_ci существует"
+if id "$USER_CI" &>/dev/null; then
+    check_pass "УЗ $USER_CI существует"
 else
-    check_warn "УЗ monitoring_ci не существует"
+    check_warn "УЗ $USER_CI не существует"
+fi
+
+if id "$USER_RO" &>/dev/null; then
+    check_pass "УЗ $USER_RO существует"
+else
+    check_warn "УЗ $USER_RO не существует"
 fi
 
 echo ""

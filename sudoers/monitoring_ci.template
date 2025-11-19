@@ -1,0 +1,120 @@
+# Sudoers file for {{USER_CI}} (Техническая УЗ для CI/CD деплоя)
+# 
+# ВАЖНО: Этот файл должен быть размещен в /etc/sudoers.d/{{USER_CI}}
+# После размещения проверить синтаксис: sudo visudo -c -f /etc/sudoers.d/{{USER_CI}}
+#
+# Создание УЗ и запрос прав выполняется через IDM (см. docs/IDM_ACCOUNTS_GUIDE.md)
+# Полная документация: docs/SUDOERS_GUIDE.md
+#
+# Пользователь: {{USER_CI}}
+# Тип: ТУЗ (Техническая учетная запись)
+# Назначение: Автоматизированный деплой через Jenkins/Ansible
+# Права: Максимальные (для деплоя, управления сервисами, создания структуры)
+#
+
+# ==============================================================================
+# ПЕРЕКЛЮЧЕНИЕ НА ДРУГОГО ПОЛЬЗОВАТЕЛЯ
+# ==============================================================================
+
+# Возможность выполнения команд от имени {{USER_SYS}}
+{{USER_CI}} ALL=({{USER_SYS}}) NOPASSWD: ALL
+
+# ==============================================================================
+# УПРАВЛЕНИЕ ПРАВАМИ НА ДИРЕКТОРИИ (отсортировано по алфавиту)
+# ==============================================================================
+
+{{USER_CI}} ALL=(ALL\:ALL) NOPASSWD: /usr/bin/chmod 640 /dev/shm/monitoring_secrets/ca_chain.crt
+{{USER_CI}} ALL=(ALL\:ALL) NOPASSWD: /usr/bin/chmod 640 /dev/shm/monitoring_secrets/client.crt
+{{USER_CI}} ALL=(ALL\:ALL) NOPASSWD: /usr/bin/chmod 640 /dev/shm/monitoring_secrets/grafana-client.crt
+{{USER_CI}} ALL=(ALL\:ALL) NOPASSWD: /usr/bin/chmod 640 /dev/shm/monitoring_secrets/server.crt
+{{USER_CI}} ALL=(ALL\:ALL) NOPASSWD: /usr/bin/chmod 600 /dev/shm/monitoring_secrets/client.key
+{{USER_CI}} ALL=(ALL\:ALL) NOPASSWD: /usr/bin/chmod 600 /dev/shm/monitoring_secrets/grafana-client.key
+{{USER_CI}} ALL=(ALL\:ALL) NOPASSWD: /usr/bin/chmod 600 /dev/shm/monitoring_secrets/server.key
+{{USER_CI}} ALL=(ALL\:ALL) NOPASSWD: /usr/bin/chmod 700 /dev/shm/monitoring_secrets
+{{USER_CI}} ALL=(ALL\:ALL) NOPASSWD: /usr/bin/chmod 750 /opt/monitoring/bin
+{{USER_CI}} ALL=(ALL\:ALL) NOPASSWD: /usr/bin/chmod 750 /opt/monitoring/config
+{{USER_CI}} ALL=(ALL\:ALL) NOPASSWD: /usr/bin/chmod 755 /opt/monitoring/scripts
+{{USER_CI}} ALL=(ALL\:ALL) NOPASSWD: /usr/bin/chmod 770 /opt/monitoring/data
+{{USER_CI}} ALL=(ALL\:ALL) NOPASSWD: /usr/bin/chmod 770 /opt/monitoring/logs
+
+# ==============================================================================
+# УПРАВЛЕНИЕ ВЛАДЕЛЬЦАМИ ФАЙЛОВ И ДИРЕКТОРИЙ (отсортировано по алфавиту)
+# ==============================================================================
+
+{{USER_CI}} ALL=(ALL\:ALL) NOPASSWD: /usr/bin/chown -R {{USER_CI}}\:{{USER_SYS}} /opt/monitoring/bin
+{{USER_CI}} ALL=(ALL\:ALL) NOPASSWD: /usr/bin/chown -R {{USER_CI}}\:{{USER_SYS}} /opt/monitoring/config
+{{USER_CI}} ALL=(ALL\:ALL) NOPASSWD: /usr/bin/chown -R {{USER_CI}}\:{{USER_SYS}} /opt/monitoring/scripts
+{{USER_CI}} ALL=(ALL\:ALL) NOPASSWD: /usr/bin/chown -R {{USER_SYS}}\:{{USER_SYS}} /opt/monitoring/data
+{{USER_CI}} ALL=(ALL\:ALL) NOPASSWD: /usr/bin/chown -R {{USER_SYS}}\:{{USER_SYS}} /opt/monitoring/logs
+{{USER_CI}} ALL=(ALL\:ALL) NOPASSWD: /usr/bin/chown {{USER_SYS}}\:{{USER_SYS}} /dev/shm/monitoring_secrets
+{{USER_CI}} ALL=(ALL\:ALL) NOPASSWD: /usr/bin/chown {{USER_SYS}}\:{{USER_SYS}} /dev/shm/monitoring_secrets/ca_chain.crt
+{{USER_CI}} ALL=(ALL\:ALL) NOPASSWD: /usr/bin/chown {{USER_SYS}}\:{{USER_SYS}} /dev/shm/monitoring_secrets/client.crt
+{{USER_CI}} ALL=(ALL\:ALL) NOPASSWD: /usr/bin/chown {{USER_SYS}}\:{{USER_SYS}} /dev/shm/monitoring_secrets/client.key
+{{USER_CI}} ALL=(ALL\:ALL) NOPASSWD: /usr/bin/chown {{USER_SYS}}\:{{USER_SYS}} /dev/shm/monitoring_secrets/grafana-client.crt
+{{USER_CI}} ALL=(ALL\:ALL) NOPASSWD: /usr/bin/chown {{USER_SYS}}\:{{USER_SYS}} /dev/shm/monitoring_secrets/grafana-client.key
+{{USER_CI}} ALL=(ALL\:ALL) NOPASSWD: /usr/bin/chown {{USER_SYS}}\:{{USER_SYS}} /dev/shm/monitoring_secrets/server.crt
+{{USER_CI}} ALL=(ALL\:ALL) NOPASSWD: /usr/bin/chown {{USER_SYS}}\:{{USER_SYS}} /dev/shm/monitoring_secrets/server.key
+
+# ==============================================================================
+# СОЗДАНИЕ ДИРЕКТОРИЙ (отсортировано по алфавиту)
+# ==============================================================================
+
+{{USER_CI}} ALL=(ALL\:ALL) NOPASSWD: /usr/bin/mkdir -p /dev/shm/monitoring_secrets
+{{USER_CI}} ALL=(ALL\:ALL) NOPASSWD: /usr/bin/mkdir -p /opt/monitoring/backups
+{{USER_CI}} ALL=(ALL\:ALL) NOPASSWD: /usr/bin/mkdir -p /opt/monitoring/bin
+{{USER_CI}} ALL=(ALL\:ALL) NOPASSWD: /usr/bin/mkdir -p /opt/monitoring/config
+{{USER_CI}} ALL=(ALL\:ALL) NOPASSWD: /usr/bin/mkdir -p /opt/monitoring/data
+{{USER_CI}} ALL=(ALL\:ALL) NOPASSWD: /usr/bin/mkdir -p /opt/monitoring/logs
+{{USER_CI}} ALL=(ALL\:ALL) NOPASSWD: /usr/bin/mkdir -p /opt/monitoring/scripts
+
+# ==============================================================================
+# УПРАВЛЕНИЕ USER SYSTEMD UNITS (отсортировано по алфавиту)
+# ==============================================================================
+
+{{USER_CI}} ALL=(ALL\:ALL) NOPASSWD: /usr/bin/systemctl --user daemon-reload
+{{USER_CI}} ALL=(ALL\:ALL) NOPASSWD: /usr/bin/systemctl --user disable grafana
+{{USER_CI}} ALL=(ALL\:ALL) NOPASSWD: /usr/bin/systemctl --user disable harvest
+{{USER_CI}} ALL=(ALL\:ALL) NOPASSWD: /usr/bin/systemctl --user disable prometheus
+{{USER_CI}} ALL=(ALL\:ALL) NOPASSWD: /usr/bin/systemctl --user disable vault-agent-monitoring
+{{USER_CI}} ALL=(ALL\:ALL) NOPASSWD: /usr/bin/systemctl --user enable grafana
+{{USER_CI}} ALL=(ALL\:ALL) NOPASSWD: /usr/bin/systemctl --user enable harvest
+{{USER_CI}} ALL=(ALL\:ALL) NOPASSWD: /usr/bin/systemctl --user enable prometheus
+{{USER_CI}} ALL=(ALL\:ALL) NOPASSWD: /usr/bin/systemctl --user enable vault-agent-monitoring
+{{USER_CI}} ALL=(ALL\:ALL) NOPASSWD: /usr/bin/systemctl --user restart grafana
+{{USER_CI}} ALL=(ALL\:ALL) NOPASSWD: /usr/bin/systemctl --user restart harvest
+{{USER_CI}} ALL=(ALL\:ALL) NOPASSWD: /usr/bin/systemctl --user restart prometheus
+{{USER_CI}} ALL=(ALL\:ALL) NOPASSWD: /usr/bin/systemctl --user restart vault-agent-monitoring
+{{USER_CI}} ALL=(ALL\:ALL) NOPASSWD: /usr/bin/systemctl --user start grafana
+{{USER_CI}} ALL=(ALL\:ALL) NOPASSWD: /usr/bin/systemctl --user start harvest
+{{USER_CI}} ALL=(ALL\:ALL) NOPASSWD: /usr/bin/systemctl --user start prometheus
+{{USER_CI}} ALL=(ALL\:ALL) NOPASSWD: /usr/bin/systemctl --user start vault-agent-monitoring
+{{USER_CI}} ALL=(ALL\:ALL) NOPASSWD: NOEXEC: /usr/bin/systemctl --user status grafana
+{{USER_CI}} ALL=(ALL\:ALL) NOPASSWD: NOEXEC: /usr/bin/systemctl --user status harvest
+{{USER_CI}} ALL=(ALL\:ALL) NOPASSWD: NOEXEC: /usr/bin/systemctl --user status prometheus
+{{USER_CI}} ALL=(ALL\:ALL) NOPASSWD: NOEXEC: /usr/bin/systemctl --user status vault-agent-monitoring
+{{USER_CI}} ALL=(ALL\:ALL) NOPASSWD: /usr/bin/systemctl --user stop grafana
+{{USER_CI}} ALL=(ALL\:ALL) NOPASSWD: /usr/bin/systemctl --user stop harvest
+{{USER_CI}} ALL=(ALL\:ALL) NOPASSWD: /usr/bin/systemctl --user stop prometheus
+{{USER_CI}} ALL=(ALL\:ALL) NOPASSWD: /usr/bin/systemctl --user stop vault-agent-monitoring
+
+# ==============================================================================
+# ПРОСМОТР ЛОГОВ (отсортировано по алфавиту)
+# ==============================================================================
+
+{{USER_CI}} ALL=(ALL\:ALL) NOPASSWD: NOEXEC: /usr/bin/journalctl --user -u grafana
+{{USER_CI}} ALL=(ALL\:ALL) NOPASSWD: NOEXEC: /usr/bin/journalctl --user -u grafana --follow
+{{USER_CI}} ALL=(ALL\:ALL) NOPASSWD: NOEXEC: /usr/bin/journalctl --user -u grafana --no-pager
+{{USER_CI}} ALL=(ALL\:ALL) NOPASSWD: NOEXEC: /usr/bin/journalctl --user -u grafana --since *
+{{USER_CI}} ALL=(ALL\:ALL) NOPASSWD: NOEXEC: /usr/bin/journalctl --user -u harvest
+{{USER_CI}} ALL=(ALL\:ALL) NOPASSWD: NOEXEC: /usr/bin/journalctl --user -u harvest --follow
+{{USER_CI}} ALL=(ALL\:ALL) NOPASSWD: NOEXEC: /usr/bin/journalctl --user -u harvest --no-pager
+{{USER_CI}} ALL=(ALL\:ALL) NOPASSWD: NOEXEC: /usr/bin/journalctl --user -u harvest --since *
+{{USER_CI}} ALL=(ALL\:ALL) NOPASSWD: NOEXEC: /usr/bin/journalctl --user -u prometheus
+{{USER_CI}} ALL=(ALL\:ALL) NOPASSWD: NOEXEC: /usr/bin/journalctl --user -u prometheus --follow
+{{USER_CI}} ALL=(ALL\:ALL) NOPASSWD: NOEXEC: /usr/bin/journalctl --user -u prometheus --no-pager
+{{USER_CI}} ALL=(ALL\:ALL) NOPASSWD: NOEXEC: /usr/bin/journalctl --user -u prometheus --since *
+{{USER_CI}} ALL=(ALL\:ALL) NOPASSWD: NOEXEC: /usr/bin/journalctl --user -u vault-agent-monitoring
+{{USER_CI}} ALL=(ALL\:ALL) NOPASSWD: NOEXEC: /usr/bin/journalctl --user -u vault-agent-monitoring --follow
+{{USER_CI}} ALL=(ALL\:ALL) NOPASSWD: NOEXEC: /usr/bin/journalctl --user -u vault-agent-monitoring --no-pager
+{{USER_CI}} ALL=(ALL\:ALL) NOPASSWD: NOEXEC: /usr/bin/journalctl --user -u vault-agent-monitoring --since *
+

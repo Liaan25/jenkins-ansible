@@ -40,9 +40,9 @@
   notify: restart vault-agent
   tags: [config]
 
-- name: "Vault Agent | Копирование systemd unit"
-  copy:
-    src: "{{ playbook_dir }}/../../systemd/vault-agent-monitoring.service"
+- name: "Vault Agent | Развертывание systemd unit из template"
+  template:
+    src: vault-agent-monitoring.service.j2
     dest: "{{ systemd_user_dir }}/vault-agent-monitoring.service"
     owner: "{{ monitoring_service_user }}"
     group: "{{ monitoring_group }}"

@@ -9,12 +9,26 @@
 # Базовая директория для мониторинга
 monitoring_base_dir: "/opt/monitoring"
 
-# Учетные записи
-monitoring_service_user: "monitoring_svc"
-monitoring_admin_user: "monitoring_admin"
-monitoring_ci_user: "monitoring_ci"
-monitoring_ro_user: "monitoring_ro"
-monitoring_group: "monitoring"
+# ==============================================================================
+# УЧЕТНЫЕ ЗАПИСИ (ДИНАМИЧЕСКИЕ)
+# ==============================================================================
+# KAE_STEND извлекается из NAMESPACE_CI автоматически в Jenkins
+# Формат имени: {{ kae_stend }}-lnx-mon_<тип>
+# Пример: CI10742292-lnx-mon_sys
+
+# KAE стенд (извлекается из NAMESPACE_CI)
+kae_stend: "{{ kae_stend | default('KPRJ000000') }}"
+
+# Динамические имена пользователей
+monitoring_service_user: "{{ user_sys | default(kae_stend + '-lnx-mon_sys') }}"
+monitoring_admin_user: "{{ user_admin | default(kae_stend + '-lnx-mon_admin') }}"
+monitoring_ci_user: "{{ user_ci | default(kae_stend + '-lnx-mon_ci') }}"
+monitoring_ro_user: "{{ user_ro | default(kae_stend + '-lnx-mon_ro') }}"
+
+# Динамическая группа (группа = имя СУЗ)
+# При создании СУЗ в IDM автоматически создается группа с тем же именем
+# Остальные пользователи добавляются в эту группу как secondary group
+monitoring_group: "{{ user_sys | default(kae_stend + '-lnx-mon_sys') }}"
 
 # ==============================================================================
 # VAULT / SECMAN ПАРАМЕТРЫ

@@ -28,9 +28,9 @@
   notify: restart harvest
   tags: [config]
 
-- name: "Harvest | Копирование systemd unit"
-  copy:
-    src: "{{ playbook_dir }}/../../systemd/harvest.service"
+- name: "Harvest | Развертывание systemd unit из template"
+  template:
+    src: harvest.service.j2
     dest: "{{ systemd_user_dir }}/harvest.service"
     owner: "{{ monitoring_service_user }}"
     group: "{{ monitoring_group }}"
