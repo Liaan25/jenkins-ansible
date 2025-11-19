@@ -276,7 +276,167 @@ pipeline {
         }
         
         // ==========================================
-        // STAGE 2: Получение секретов из Vault
+        // STAGE 2: Настройка групп пользователей через RLM
+        // ==========================================
+        stage('Настройка групп пользователей (RLM)') {
+            steps {
+                script {
+                    echo """
+                    ================================================
+                    ДОБАВЛЕНИЕ ПОЛЬЗОВАТЕЛЕЙ В ГРУППУ СУЗ ЧЕРЕЗ RLM
+                    ================================================
+                    """
+                    
+                    withCredentials([
+                        string(credentialsId: 'rlm-token', variable: 'RLM_TOKEN')
+                    ]) {
+                        // Получение IP адреса сервера
+                        def serverIP = params.SERVER_ADDRESS
+                        
+                        // Если SERVER_ADDRESS - это FQDN, резолвим в IP
+                        if (!params.SERVER_ADDRESS.matches(/^\d+\.\d+\.\d+\.\d+$/)) {
+                            echo "Резолвинг FQDN ${params.SERVER_ADDRESS} в IP..."
+                            serverIP = sh(
+                                script: "getent hosts ${params.SERVER_ADDRESS} | awk '{ print \$1 }' | head -1",
+                                returnStdout: true
+                            ).trim()
+                            echo "✓ Получен IP: ${serverIP}"
+                        }
+                        
+                        if (params.DEBUG) {
+                            echo """
+                            DEBUG: Параметры RLM запроса:
+                            - RLM_API_URL: ${params.RLM_API_URL}
+                            - Server IP: ${serverIP}
+                            - Группа СУЗ: ${env.USER_SYS}
+                            - Пользователи для добавления:
+                              * ${env.USER_CI} (ТУЗ CI/CD)
+                              * ${env.USER_ADMIN} (ПУЗ Admin)
+                              * ${env.USER_RO} (ReadOnly)
+                            """
+                        }
+                        
+                        // Создание задачи RLM для добавления пользователей в группу
+                        echo "Создание задачи RLM: добавление пользователей в группу ${env.USER_SYS}..."
+                        
+                        def taskResponse = sh(
+                            script: """
+                                curl -s -X POST \\
+                                  "${params.RLM_API_URL}/api/tasks.json" \\
+                                  -H "Accept: application/json" \\
+                                  -H "Authorization: Token \${RLM_TOKEN}" \\
+                                  -H "Content-Type: application/json" \\
+                                  -d '{
+                                    "params": {
+                                      "VAR_GRPS": [
+                                        {
+                                          "group": "${env.USER_SYS}",
+                                          "gid": "",
+                                          "users": ["${env.USER_CI}", "${env.USER_ADMIN}", "${env.USER_RO}"]
+                                        }
+                                      ]
+                                    },
+                                    "start_at": "now",
+                                    "service": "UVS_LINUX_ADD_USERS_GROUP",
+                                    "skip_check_collisions": true,
+                                    "items": [
+                                      {
+                                        "table_id": "uvslinuxtemplatewithtestandprom",
+                                        "invsvm_ip": "${serverIP}"
+                                      }
+                                    ]
+                                  }'
+                            """,
+                            returnStdout: true
+                        ).trim()
+                        
+                        if (params.DEBUG) {
+                            echo "DEBUG: RLM Task Response:"
+                            echo taskResponse
+                        }
+                        
+                        // Извлечение task_id из ответа
+                        def taskId = sh(
+                            script: "echo '${taskResponse}' | jq -r '.id'",
+                            returnStdout: true
+                        ).trim()
+                        
+                        if (taskId == "null" || taskId == "") {
+                            error("❌ Не удалось получить task_id из ответа RLM. Проверьте логи выше.")
+                        }
+                        
+                        echo "✓ Задача RLM создана: ID = ${taskId}"
+                        echo "  URL: ${params.RLM_API_URL}/api/tasks/${taskId}/"
+                        
+                        // Ожидание завершения задачи (polling)
+                        echo "Ожидание завершения задачи RLM (polling каждые 10 секунд)..."
+                        def maxAttempts = 120  // 120 * 10 = 1200 секунд = 20 минут
+                        def attemptDelay = 10  // секунд
+                        def taskCompleted = false
+                        
+                        for (int attempt = 1; attempt <= maxAttempts; attempt++) {
+                            sleep(attemptDelay)
+                            
+                            def statusResponse = sh(
+                                script: """
+                                    curl -s -X GET \\
+                                      -H "Accept: application/json" \\
+                                      -H "Authorization: Token \${RLM_TOKEN}" \\
+                                      -H "Content-Type: application/json" \\
+                                      "${params.RLM_API_URL}/api/tasks/${taskId}/"
+                                """,
+                                returnStdout: true
+                            ).trim()
+                            
+                            def taskStatus = sh(
+                                script: "echo '${statusResponse}' | jq -r '.status'",
+                                returnStdout: true
+                            ).trim()
+                            
+                            echo "[Попытка ${attempt}/${maxAttempts}] Статус задачи RLM: ${taskStatus}"
+                            
+                            if (taskStatus == "success") {
+                                echo "✓ Задача RLM успешно выполнена!"
+                                taskCompleted = true
+                                break
+                            } else if (taskStatus == "failed" || taskStatus == "error") {
+                                echo "❌ Задача RLM завершилась с ошибкой!"
+                                echo "Полный ответ RLM:"
+                                echo statusResponse
+                                error("Задача RLM завершилась со статусом: ${taskStatus}")
+                            }
+                            
+                            // Вывод детальной информации каждую минуту в DEBUG режиме
+                            if (params.DEBUG && attempt % 6 == 0) {
+                                echo "DEBUG: Полный ответ RLM (через ${attempt * attemptDelay} секунд):"
+                                echo statusResponse
+                            }
+                        }
+                        
+                        if (!taskCompleted) {
+                            error("❌ Таймаут ожидания выполнения задачи RLM (${maxAttempts * attemptDelay} секунд = ${maxAttempts * attemptDelay / 60} минут)")
+                        }
+                        
+                        echo """
+                        ================================================
+                        ✓ ГРУППЫ НАСТРОЕНЫ УСПЕШНО
+                        ================================================
+                        Пользователи добавлены в группу ${env.USER_SYS}:
+                          - ${env.USER_CI} (ТУЗ CI/CD)
+                          - ${env.USER_ADMIN} (ПУЗ Admin)
+                          - ${env.USER_RO} (ReadOnly)
+                        
+                        Задача RLM: ${taskId}
+                        Статус: success
+                        ================================================
+                        """
+                    }
+                }
+            }
+        }
+        
+        // ==========================================
+        // STAGE 3: Получение секретов из Vault
         // ==========================================
         stage('Получение секретов из Vault') {
             steps {
@@ -393,7 +553,7 @@ pipeline {
         }
         
         // ==========================================
-        // STAGE 3: Подготовка Ansible проекта
+        // STAGE 4: Подготовка Ansible проекта
         // ==========================================
         stage('Подготовка Ansible') {
             when {
@@ -439,7 +599,7 @@ vault_namespace=${params.NAMESPACE_CI}
         }
         
         // ==========================================
-        // STAGE 4: Передача секретов на сервер
+        // STAGE 5: Передача секретов на сервер
         // ==========================================
         stage('Передача секретов на сервер') {
             steps {
@@ -513,7 +673,7 @@ echo "[SUCCESS] Секреты успешно переданы и размеще
         }
         
         // ==========================================
-        // STAGE 5: Развертывание через Ansible
+        // STAGE 6: Развертывание через Ansible
         // ==========================================
         stage('Развертывание (Ansible)') {
             when {
@@ -553,7 +713,7 @@ echo "[SUCCESS] Секреты успешно переданы и размеще
         }
         
         // ==========================================
-        // STAGE 6: Проверка безопасности
+        // STAGE 7: Проверка безопасности
         // ==========================================
         stage('Проверка безопасности') {
             when {
@@ -602,7 +762,7 @@ echo "[SUCCESS] Секреты успешно переданы и размеще
         }
         
         // ==========================================
-        // STAGE 7: Верификация сервисов
+        // STAGE 8: Верификация сервисов
         // ==========================================
         stage('Верификация сервисов') {
             steps {
@@ -646,7 +806,7 @@ EOF
         }
         
         // ==========================================
-        // STAGE 8: Очистка секретов
+        // STAGE 9: Очистка секретов
         // ==========================================
         stage('Очистка секретов') {
             when {
