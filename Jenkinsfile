@@ -305,24 +305,24 @@ users_to_check="${env.USER_CI} ${env.USER_ADMIN} ${env.USER_RO}"
 missing_users=""
 all_ok=true
 
-for user in \\\$users_to_check; do
-    if id "\\\$user" &>/dev/null; then
-        if groups "\\\$user" | grep -q "${env.USER_SYS}"; then
-            echo "✓ \\\$user: уже в группе ${env.USER_SYS}"
+for user in \$users_to_check; do
+    if id "\$user" &>/dev/null; then
+        if groups "\$user" | grep -q "${env.USER_SYS}"; then
+            echo "✓ \$user: уже в группе ${env.USER_SYS}"
         else
-            echo "✗ \\\$user: НЕ в группе ${env.USER_SYS}"
-            missing_users="\\\${missing_users} \\\$user"
+            echo "✗ \$user: НЕ в группе ${env.USER_SYS}"
+            missing_users="\${missing_users} \$user"
             all_ok=false
         fi
     else
-        echo "⚠ \\\$user: пользователь не существует (будет создан позже)"
-        missing_users="\\\${missing_users} \\\$user"
+        echo "⚠ \$user: пользователь не существует (будет создан позже)"
+        missing_users="\${missing_users} \$user"
         all_ok=false
     fi
 done
 
 # Возвращаем результат
-if [ "\\\$all_ok" = "true" ]; then
+if [ "\$all_ok" = "true" ]; then
     echo "ALL_OK"
     exit 0
 else
