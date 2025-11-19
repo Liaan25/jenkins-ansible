@@ -370,7 +370,7 @@ pipeline {
                         
                         // Ожидание завершения задачи (polling)
                         echo "Ожидание завершения задачи RLM (polling каждые 10 секунд)..."
-                        def maxAttempts = 120  // 120 * 10 = 1200 секунд = 20 минут
+                        def maxAttempts = 210  // 210 * 10 = 2100 секунд = 35 минут
                         def attemptDelay = 10  // секунд
                         def taskCompleted = false
                         
