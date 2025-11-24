@@ -293,7 +293,7 @@ pipeline {
                             keyFileVariable: 'SSH_KEY',
                             usernameVariable: 'SSH_USER'
                         ),
-                        string(credentialsId: 'rlm-token', variable: 'RLM_TOKEN')
+                        string(credentialsId: 'rlm-token-dev', variable: 'RLM_TOKEN')
                     ]) {
                         // Проверка членства пользователей в группе
                         echo "Проверка: состоят ли пользователи в группе ${env.USER_SYS}..."
@@ -682,7 +682,7 @@ vault_namespace=${params.NAMESPACE_CI}
                             keyFileVariable: 'SSH_KEY',
                             usernameVariable: 'SSH_USER'
                         ),
-                        string(credentialsId: 'rlm-token', variable: 'RLM_TOKEN')
+                        string(credentialsId: 'rlm-token-dev', variable: 'RLM_TOKEN')
                     ]) {
                         // DEBUG: Проверка локального файла secrets.json
                         if (params.DEBUG) {
@@ -909,7 +909,7 @@ echo "[SUCCESS] Секреты успешно переданы и размеще
                             keyFileVariable: 'SSH_KEY',
                             usernameVariable: 'SSH_USER'
                         ),
-                        string(credentialsId: 'rlm-token', variable: 'RLM_TOKEN')
+                        string(credentialsId: 'rlm-token-dev', variable: 'RLM_TOKEN')
                     ]) {
                         dir('ansible_project/ansible') {
                             // DEBUG: Проверка структуры директории
