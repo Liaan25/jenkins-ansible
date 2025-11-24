@@ -803,7 +803,7 @@ echo ""
 """ : ''}
 
 cat ${WORKSPACE_LOCAL}/secrets.json | ssh -i "\${SSH_KEY}" -o StrictHostKeyChecking=no "\${SSH_USER}@${params.SERVER_ADDRESS}" \\
-    "bash -c 'cat > ${REMOTE_SECRETS_DIR}/secrets.json'"
+    "tee ${REMOTE_SECRETS_DIR}/secrets.json > /dev/null"
 
 ${params.DEBUG ? 'echo "[DEBUG] Удаленный файл secrets.json после копирования (от SSH_USER):"' : ''}
 ${params.DEBUG ? """
