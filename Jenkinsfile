@@ -935,6 +935,7 @@ echo "[SUCCESS] Секреты успешно переданы и размеще
                                     playbooks/deploy_monitoring.yml \\
                                     --extra-vars "rlm_token=${RLM_TOKEN}" \\
                                     --extra-vars "ansible_user=\${SSH_USER}" \\
+                                    --extra-vars "monitoring_base_dir=/opt/monitoring" \\
                                     --private-key=\${SSH_KEY} \\
                                     ${params.DEBUG ? '-vvv' : '-v'}
                             """
