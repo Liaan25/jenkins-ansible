@@ -930,14 +930,20 @@ echo "[SUCCESS] Секреты успешно переданы и размеще
                             // Запуск Ansible playbook с поддержкой DEBUG режима
                             // Используем SSH_USER для подключения, так как у него есть ключ
                             sh """
-                                ansible-playbook \\
-                                    -i inventories/dynamic_inventory \\
-                                    playbooks/deploy_monitoring.yml \\
-                                    --extra-vars "rlm_token=${RLM_TOKEN}" \\
-                                    --extra-vars "ansible_user=\${SSH_USER}" \\
-                                    --extra-vars "monitoring_base_dir=/opt/monitoring" \\
-                                    --private-key=\${SSH_KEY} \\
-                                    ${params.DEBUG ? '-vvv' : '-v'}
+                            ansible-playbook \\
+                                -i inventories/dynamic_inventory \\
+                                playbooks/deploy_monitoring.yml \\
+                                --extra-vars "rlm_token=${RLM_TOKEN}" \\
+                                --extra-vars "ansible_user=\${SSH_USER}" \\
+                                --extra-vars "monitoring_base_dir=/opt/monitoring" \\
+                                --extra-vars "kae_stend=${env.KAE_STEND}" \\
+                                --extra-vars "user_sys=${env.USER_SYS}" \\
+                                --extra-vars "user_ci=${env.USER_CI}" \\
+                                --extra-vars "user_admin=${env.USER_ADMIN}" \\
+                                --extra-vars "user_ro=${env.USER_RO}" \\
+                                --extra-vars "monitoring_group=${env.USER_SYS}" \\
+                                --private-key=\${SSH_KEY} \\
+                                ${params.DEBUG ? '-vvv' : '-v'}
                             """
                         }
                         
