@@ -858,9 +858,8 @@ echo "[INFO] Установка прав доступа для Vault Agent..."
 # Директория: 750 (vault_agent_user: rwx, vault_agent_group: r-x, other: ---)
 ssh -i "\${SSH_KEY}" -o StrictHostKeyChecking=no -o LogLevel=ERROR -q "\${SSH_USER}@${params.SERVER_ADDRESS}" \\
     "sudo chmod 750 ${REMOTE_SECRETS_DIR}"
-# Файлы: 640 (vault_agent_user: rw-, vault_agent_group: r--, other: ---)
-ssh -i "\${SSH_KEY}" -o StrictHostKeyChecking=no -o LogLevel=ERROR -q "\${SSH_USER}@${params.SERVER_ADDRESS}" \\
-    "sudo chmod 640 ${REMOTE_SECRETS_DIR}/*"
+# NOTE: Файлы остаются с правами от wrapper (600) и chown выше уже установил владельца vault_agent_user
+#       Vault Agent может читать свои собственные файлы, дополнительный chmod не требуется
 
 ${params.DEBUG ? 'echo "[DEBUG] Финальные права на /dev/shm/monitoring_secrets/ (для Vault Agent):"' : ''}
 ${params.DEBUG ? """
