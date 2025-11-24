@@ -800,28 +800,25 @@ DEBUG_EOF4
 echo ""
 """ : ''}
 
-echo "[INFO] Установка финальных прав: передача владения Vault Agent и ограничение доступа..."
-# Шаг 1: Передать владение директории и всех файлов vault_agent_user:vault_agent_group
-# Это КРИТИЧНО: Vault Agent запускается от ${env.KAE_STEND}-lnx-va-start и должен читать role_id.txt/secret_id.txt
+echo "[INFO] Установка финальных прав: передача владения SYS_USER и ограничение доступа..."
+# Шаг 1: Передать владение директории и secrets.json → SYS_USER (для wrapper скрипта)
 ssh -i "\${SSH_KEY}" -o StrictHostKeyChecking=no -o LogLevel=ERROR -q "\${SSH_USER}@${params.SERVER_ADDRESS}" \\
-    "sudo chown -R ${env.KAE_STEND}-lnx-va-start:${env.KAE_STEND}-lnx-va-read ${REMOTE_SECRETS_DIR}"
+    "sudo chown -R ${env.USER_SYS}:${env.USER_SYS} ${REMOTE_SECRETS_DIR}"
 
-# Шаг 2: Установить финальные права (750 на директорию, 640 на secrets.json)
-# 750: vault_agent_user (rwx), vault_agent_group (r-x), other (---)
-# 640: vault_agent_user (rw-), vault_agent_group (r--), other (---)
-# NOTE: role_id.txt и secret_id.txt будут созданы позже wrapper скриптом
+# Шаг 2: Установить права (700 на директорию, 600 на secrets.json)
+# Wrapper скрипт будет запущен от SYS_USER и должен читать secrets.json
 ssh -i "\${SSH_KEY}" -o StrictHostKeyChecking=no -o LogLevel=ERROR -q "\${SSH_USER}@${params.SERVER_ADDRESS}" \\
-    "sudo chmod 750 ${REMOTE_SECRETS_DIR}"
+    "sudo chmod 700 ${REMOTE_SECRETS_DIR}"
 ssh -i "\${SSH_KEY}" -o StrictHostKeyChecking=no -o LogLevel=ERROR -q "\${SSH_USER}@${params.SERVER_ADDRESS}" \\
-    "sudo chmod 640 ${REMOTE_SECRETS_DIR}/secrets.json"
+    "sudo chmod 600 ${REMOTE_SECRETS_DIR}/secrets.json"
 
-${params.DEBUG ? 'echo "[DEBUG] Финальные права на secrets (теперь принадлежит vault_agent_user):"' : ''}
+${params.DEBUG ? 'echo "[DEBUG] Финальные права на secrets (теперь принадлежит SYS_USER):"' : ''}
 ${params.DEBUG ? """
 ssh -i "\${SSH_KEY}" -o StrictHostKeyChecking=no -o LogLevel=ERROR -q "\${SSH_USER}@${params.SERVER_ADDRESS}" << 'DEBUG_EOF5'
 echo "  - Директория ${REMOTE_SECRETS_DIR}:"
-sudo -u ${env.KAE_STEND}-lnx-va-start ls -lad ${REMOTE_SECRETS_DIR}
-echo "  - Файлы секретов:"
-sudo -u ${env.KAE_STEND}-lnx-va-start ls -lh ${REMOTE_SECRETS_DIR}/
+sudo -u ${env.USER_SYS} ls -lad ${REMOTE_SECRETS_DIR}
+echo "  - Файл secrets.json:"
+sudo -u ${env.USER_SYS} ls -lh ${REMOTE_SECRETS_DIR}/secrets.json
 DEBUG_EOF5
 echo ""
 """ : ''}
@@ -848,15 +845,28 @@ echo "[INFO] Распаковка секретов в отдельные фай�
 ssh -i "\${SSH_KEY}" -o StrictHostKeyChecking=no -o LogLevel=ERROR -q "\${SSH_USER}@${params.SERVER_ADDRESS}" \\
     "sudo -u ${env.USER_SYS} -g ${env.USER_SYS} /opt/monitoring/scripts/wrappers/extract_vault_secrets.sh"
 
-echo "[INFO] Установка прав на role_id.txt и secret_id.txt для Vault Agent..."
-# Файлы созданы wrapper скриптом от SYS_USER, нужно передать владение vault_agent_user
+echo "[INFO] Копирование role_id.txt и secret_id.txt в /opt/vault/conf/ для Vault Agent..."
+# ВАЖНО: usermod/userdel только через IDM, поэтому копируем файлы в /opt/vault/conf/
+# где Vault Agent имеет доступ через vault_agent_group
 ssh -i "\${SSH_KEY}" -o StrictHostKeyChecking=no -o LogLevel=ERROR -q "\${SSH_USER}@${params.SERVER_ADDRESS}" \\
-    "sudo chown ${env.KAE_STEND}-lnx-va-start:${env.KAE_STEND}-lnx-va-read ${REMOTE_SECRETS_DIR}/role_id.txt ${REMOTE_SECRETS_DIR}/secret_id.txt"
+    "sudo cp ${REMOTE_SECRETS_DIR}/role_id.txt /opt/vault/conf/role_id.txt && \\
+     sudo cp ${REMOTE_SECRETS_DIR}/secret_id.txt /opt/vault/conf/secret_id.txt"
+
+echo "[INFO] Установка прав на скопированные файлы для Vault Agent..."
 ssh -i "\${SSH_KEY}" -o StrictHostKeyChecking=no -o LogLevel=ERROR -q "\${SSH_USER}@${params.SERVER_ADDRESS}" \\
-    "sudo chmod 640 ${REMOTE_SECRETS_DIR}/role_id.txt ${REMOTE_SECRETS_DIR}/secret_id.txt"
+    "sudo chown ${env.KAE_STEND}-lnx-va-start:${env.KAE_STEND}-lnx-va-read /opt/vault/conf/role_id.txt /opt/vault/conf/secret_id.txt"
+ssh -i "\${SSH_KEY}" -o StrictHostKeyChecking=no -o LogLevel=ERROR -q "\${SSH_USER}@${params.SERVER_ADDRESS}" \\
+    "sudo chmod 640 /opt/vault/conf/role_id.txt /opt/vault/conf/secret_id.txt"
 
 ${params.DEBUG ? 'echo "[DEBUG] Созданные файлы секретов:"' : ''}
-${params.DEBUG ? "ssh -i \"\${SSH_KEY}\" -o StrictHostKeyChecking=no -o LogLevel=ERROR -q \"\${SSH_USER}@${params.SERVER_ADDRESS}\" \"sudo -u ${env.KAE_STEND}-lnx-va-start ls -lh ${REMOTE_SECRETS_DIR}/\"" : ''}
+${params.DEBUG ? """
+ssh -i "\${SSH_KEY}" -o StrictHostKeyChecking=no -o LogLevel=ERROR -q "\${SSH_USER}@${params.SERVER_ADDRESS}" << 'DEBUG_EOF6'
+echo "  - В /dev/shm/monitoring_secrets/ (для SYS_USER):"
+sudo -u ${env.USER_SYS} ls -lh ${REMOTE_SECRETS_DIR}/
+echo "  - В /opt/vault/conf/ (для Vault Agent):"
+sudo -u ${env.KAE_STEND}-lnx-va-start ls -lh /opt/vault/conf/role_id.txt /opt/vault/conf/secret_id.txt
+DEBUG_EOF6
+""" : ''}
 
 echo "[SUCCESS] Секреты успешно переданы и размещены в ${REMOTE_SECRETS_DIR}"
                         """

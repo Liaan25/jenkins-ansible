@@ -12,8 +12,8 @@ auto_auth {
     mount_path = "auth/approle"
     
     config = {
-      role_id_file_path = "/dev/shm/monitoring_secrets/role_id.txt"
-      secret_id_file_path = "/dev/shm/monitoring_secrets/secret_id.txt"
+      role_id_file_path = "/opt/vault/conf/role_id.txt"
+      secret_id_file_path = "/opt/vault/conf/secret_id.txt"
       remove_secret_id_file_after_reading = false
     }
   }
