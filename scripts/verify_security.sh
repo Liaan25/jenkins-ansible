@@ -140,10 +140,10 @@ if [[ -d "/dev/shm/monitoring_secrets" ]]; then
         check_fail "/dev/shm/monitoring_secrets имеет неправильные права: $perms (должно быть 700)"
     fi
     
-    if [[ "$owner" == "monitoring_svc" ]]; then
-        check_pass "/dev/shm/monitoring_secrets принадлежит monitoring_svc"
+    if [[ "$owner" == "$USER_SYS" ]]; then
+        check_pass "/dev/shm/monitoring_secrets принадлежит $USER_SYS"
     else
-        check_fail "/dev/shm/monitoring_secrets принадлежит $owner (должно быть monitoring_svc)"
+        check_fail "/dev/shm/monitoring_secrets принадлежит $owner (должно быть $USER_SYS)"
     fi
 else
     check_warn "/dev/shm/monitoring_secrets не существует"
@@ -154,11 +154,12 @@ echo ""
 # 4. Проверка systemd units
 echo "[4] Проверка systemd units..."
 
-if [[ -d "/home/monitoring_svc/.config/systemd/user" ]]; then
-    check_pass "Директория user systemd units существует"
+USER_HOME=$(getent passwd "$USER_SYS" 2>/dev/null | cut -d: -f6)
+if [[ -n "$USER_HOME" ]] && [[ -d "$USER_HOME/.config/systemd/user" ]]; then
+    check_pass "Директория user systemd units существует ($USER_HOME/.config/systemd/user)"
     
     for service in prometheus grafana harvest vault-agent-monitoring; do
-        if [[ -f "/home/monitoring_svc/.config/systemd/user/${service}.service" ]]; then
+        if [[ -f "$USER_HOME/.config/systemd/user/${service}.service" ]]; then
             check_pass "Unit файл ${service}.service существует"
         else
             check_warn "Unit файл ${service}.service не найден"

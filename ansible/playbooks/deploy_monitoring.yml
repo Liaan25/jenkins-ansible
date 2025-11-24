@@ -693,7 +693,12 @@
   
   tasks:
     - name: "Проверка | Запуск скрипта проверки безопасности"
-      command: bash {{ monitoring_dirs.scripts }}/verify_security.sh
+      command: >
+        bash {{ monitoring_dirs.scripts }}/verify_security.sh
+        {{ monitoring_service_user }}
+        {{ monitoring_admin_user }}
+        {{ monitoring_ci_user }}
+        {{ monitoring_ro_user }}
       register: security_check
       failed_when: security_check.rc != 0
       when: deployment.run_security_checks | default(true)
