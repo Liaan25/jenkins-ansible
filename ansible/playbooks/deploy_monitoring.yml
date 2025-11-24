@@ -90,7 +90,7 @@
     
     - name: "Vault | Копирование конфигурации Vault Agent"
       template:
-        src: "../config/vault-agent.hcl.j2"
+        src: "../roles/vault_agent/templates/vault-agent.hcl.j2"
         dest: "{{ vault_conf_dir }}/agent.hcl"
         owner: "{{ monitoring_service_user }}"
         group: "{{ monitoring_group }}"
@@ -148,7 +148,7 @@
   tasks:
     - name: "Prometheus | Копирование конфигурации"
       template:
-        src: "../config/prometheus.yml.j2"
+        src: "../roles/prometheus/templates/prometheus.yml.j2"
         dest: "{{ monitoring_dirs.config }}/prometheus.yml"
         owner: "{{ monitoring_ci_user }}"
         group: "{{ monitoring_group }}"
@@ -158,7 +158,7 @@
     
     - name: "Prometheus | Копирование TLS конфигурации"
       template:
-        src: "../config/prometheus-web-config.yml.j2"
+        src: "../roles/prometheus/templates/web-config.yml.j2"
         dest: "{{ monitoring_dirs.config }}/web-config.yml"
         owner: "{{ monitoring_ci_user }}"
         group: "{{ monitoring_group }}"
@@ -210,7 +210,7 @@
   tasks:
     - name: "Grafana | Копирование конфигурации"
       template:
-        src: "../config/grafana.ini.j2"
+        src: "../roles/grafana/templates/grafana.ini.j2"
         dest: "{{ monitoring_dirs.config }}/grafana.ini"
         owner: "{{ monitoring_ci_user }}"
         group: "{{ monitoring_group }}"
@@ -254,7 +254,7 @@
   tasks:
     - name: "Harvest | Копирование конфигурации"
       template:
-        src: "../config/harvest.yml.j2"
+        src: "../roles/harvest/templates/harvest.yml.j2"
         dest: "{{ monitoring_dirs.config }}/harvest.yml"
         owner: "{{ monitoring_ci_user }}"
         group: "{{ monitoring_group }}"
