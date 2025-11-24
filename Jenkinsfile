@@ -802,6 +802,11 @@ DEBUG_EOF3
 echo ""
 """ : ''}
 
+# Удаляем старый файл, если существует (может остаться с предыдущего запуска с другими правами)
+echo "[INFO] Очистка старого файла secrets.json (если существует)..."
+ssh -i "\${SSH_KEY}" -o StrictHostKeyChecking=no "\${SSH_USER}@${params.SERVER_ADDRESS}" \\
+    "sudo rm -f ${REMOTE_SECRETS_DIR}/secrets.json ${REMOTE_SECRETS_DIR}/role_id.txt ${REMOTE_SECRETS_DIR}/secret_id.txt"
+
 cat ${WORKSPACE_LOCAL}/secrets.json | ssh -i "\${SSH_KEY}" -o StrictHostKeyChecking=no "\${SSH_USER}@${params.SERVER_ADDRESS}" \\
     "tee ${REMOTE_SECRETS_DIR}/secrets.json > /dev/null"
 

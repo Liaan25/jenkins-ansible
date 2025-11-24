@@ -32,6 +32,17 @@ mvp_dev ALL=(root:root) NOPASSWD: /usr/bin/chown -R CI10742292-lnx-mon_sys\:CI10
 
 ---
 
+### Удаление старых файлов
+
+**Очистка перед новым запуском:**
+```sudoers
+mvp_dev ALL=(root:root) NOPASSWD: /usr/bin/rm -f /dev/shm/monitoring_secrets/secrets.json
+mvp_dev ALL=(root:root) NOPASSWD: /usr/bin/rm -f /dev/shm/monitoring_secrets/role_id.txt
+mvp_dev ALL=(root:root) NOPASSWD: /usr/bin/rm -f /dev/shm/monitoring_secrets/secret_id.txt
+```
+
+---
+
 ### Изменение прав доступа
 
 **Временные права (для записи):**
@@ -63,6 +74,11 @@ mvp_dev ALL=(root:root) NOPASSWD: /usr/bin/chmod 600 /dev/shm/monitoring_secrets
 
 # Создание директории для секретов в /dev/shm
 mvp_dev ALL=(root:root) NOPASSWD: /usr/bin/mkdir -p /dev/shm/monitoring_secrets
+
+# Очистка старых файлов перед новым запуском
+mvp_dev ALL=(root:root) NOPASSWD: /usr/bin/rm -f /dev/shm/monitoring_secrets/secrets.json
+mvp_dev ALL=(root:root) NOPASSWD: /usr/bin/rm -f /dev/shm/monitoring_secrets/role_id.txt
+mvp_dev ALL=(root:root) NOPASSWD: /usr/bin/rm -f /dev/shm/monitoring_secrets/secret_id.txt
 
 # Изменение владельца директории (временно для SSH_USER, затем для SYS_USER)
 mvp_dev ALL=(root:root) NOPASSWD: /usr/bin/chown mvp_dev\:CI10742292-lnx-mon_sys /dev/shm/monitoring_secrets
