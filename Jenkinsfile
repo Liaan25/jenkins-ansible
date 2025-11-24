@@ -146,6 +146,11 @@ pipeline {
             defaultValue: true,
             description: 'Включить детальный debug вывод (WARNING: может показывать чувствительные данные в логах!)'
         )
+        booleanParam(
+            name: 'SKIP_RLM_VAULT_AGENT',
+            defaultValue: false,
+            description: 'Пропустить установку Vault Agent через RLM (если уже установлен вручную)'
+        )
     }
     
     environment {
@@ -942,6 +947,7 @@ echo "[SUCCESS] Секреты успешно переданы и размеще
                                 --extra-vars "sec_man_addr=${params.SEC_MAN_ADDR}" \\
                                 --extra-vars "vault_namespace=${env.NAMESPACE_CI}" \\
                                 --extra-vars "secrets_json_path=/dev/shm/monitoring_secrets/secrets.json" \\
+                                --extra-vars "skip_rlm_vault_agent=${params.SKIP_RLM_VAULT_AGENT}" \\
                                 --extra-vars "ansible_user=\${SSH_USER}" \\
                                 --private-key=\${SSH_KEY} \\
                                 ${params.DEBUG ? '-vvv' : '-v'}

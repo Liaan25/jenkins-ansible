@@ -100,7 +100,14 @@
             - Prometheus RPM: {{ secrets_data.rpm_url.prometheus | default('NOT SET') }}
             - Grafana RPM: {{ secrets_data.rpm_url.grafana | default('NOT SET') }}
             - Harvest RPM: {{ secrets_data.rpm_url.harvest | default('NOT SET') }}
+            - Skip Vault Agent: {{ skip_rlm_vault_agent | default(false) }}
       tags: [vault, rpm]
+    
+    - name: "RLM | ПРОПУСК установки Vault Agent (параметр SKIP_RLM_VAULT_AGENT=true)"
+      debug:
+        msg: "⚠️  Vault Agent НЕ будет установлен через RLM. Убедитесь что он уже установлен вручную!"
+      when: skip_rlm_vault_agent | default(false) | bool
+      tags: [vault]
     
     - name: "RLM | Установка Vault Agent через RLM сценарий"
       uri:
@@ -138,6 +145,7 @@
         status_code: [200, 201]
         validate_certs: no
       register: vault_install_task
+      when: not (skip_rlm_vault_agent | default(false) | bool)
       tags: [vault]
     
     - name: "RLM | Мониторинг установки Vault Agent (ожидание завершения)"
@@ -152,6 +160,7 @@
       retries: 120
       delay: 10
       failed_when: vault_status.json.status in ['failed', 'error']
+      when: not (skip_rlm_vault_agent | default(false) | bool)
       tags: [vault]
     
     - name: "RLM | Установка RPM пакетов (Prometheus, Grafana, Harvest)"
