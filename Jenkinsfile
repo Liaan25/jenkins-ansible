@@ -908,7 +908,8 @@ echo "[SUCCESS] Секреты успешно переданы и размеще
                             credentialsId: params.SSH_CREDENTIALS_ID,
                             keyFileVariable: 'SSH_KEY',
                             usernameVariable: 'SSH_USER'
-                        )
+                        ),
+                        string(credentialsId: 'rlm-token', variable: 'RLM_TOKEN')
                     ]) {
                         dir('ansible_project/secure_deployment/ansible') {
                             // Запуск Ansible playbook с поддержкой DEBUG режима
