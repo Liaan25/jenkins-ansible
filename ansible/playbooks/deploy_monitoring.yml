@@ -77,9 +77,29 @@
         server_ip_address: "{{ ansible_default_ipv4.address }}"
       tags: [vault, rpm]
     
-    - name: "RLM | Информация о сервере для RLM"
+    - name: "RLM | Чтение секретов из secrets.json (включая RPM URLs)"
+      slurp:
+        src: "{{ secrets_json_path }}"
+      register: secrets_content
+      become: yes
+      become_user: "{{ monitoring_service_user }}"
+      tags: [vault, rpm]
+    
+    - name: "RLM | Парсинг секретов из JSON"
+      set_fact:
+        secrets_data: "{{ secrets_content.content | b64decode | from_json }}"
+      tags: [vault, rpm]
+    
+    - name: "RLM | Информация о сервере и секретах для RLM"
       debug:
-        msg: "RLM будет использовать IP: {{ server_ip_address }}, SEC_MAN_ADDR: {{ sec_man_addr | upper }}, Namespace: {{ vault_namespace }}"
+        msg: |
+          RLM параметры:
+            - IP: {{ server_ip_address }}
+            - SEC_MAN_ADDR: {{ sec_man_addr | upper }}
+            - Namespace: {{ vault_namespace }}
+            - Prometheus RPM: {{ secrets_data.rpm_url.prometheus | default('NOT SET') }}
+            - Grafana RPM: {{ secrets_data.rpm_url.grafana | default('NOT SET') }}
+            - Harvest RPM: {{ secrets_data.rpm_url.harvest | default('NOT SET') }}
       tags: [vault, rpm]
     
     - name: "RLM | Установка Vault Agent через RLM сценарий"
@@ -154,9 +174,9 @@
         status_code: [200, 201]
         validate_certs: no
       loop:
-        - { name: "Prometheus", url: "{{ prometheus_rpm_url }}" }
-        - { name: "Grafana", url: "{{ grafana_rpm_url }}" }
-        - { name: "Harvest", url: "{{ harvest_rpm_url }}" }
+        - { name: "Prometheus", url: "{{ secrets_data.rpm_url.prometheus }}" }
+        - { name: "Grafana", url: "{{ secrets_data.rpm_url.grafana }}" }
+        - { name: "Harvest", url: "{{ secrets_data.rpm_url.harvest }}" }
       register: rpm_install_tasks
       tags: [rpm]
     

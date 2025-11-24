@@ -941,9 +941,7 @@ echo "[SUCCESS] Секреты успешно переданы и размеще
                                 --extra-vars "rlm_api_url=${params.RLM_API_URL}" \\
                                 --extra-vars "sec_man_addr=${params.SEC_MAN_ADDR}" \\
                                 --extra-vars "vault_namespace=${env.NAMESPACE_CI}" \\
-                                --extra-vars "prometheus_rpm_url=${env.PROMETHEUS_RPM_URL}" \\
-                                --extra-vars "grafana_rpm_url=${env.GRAFANA_RPM_URL}" \\
-                                --extra-vars "harvest_rpm_url=${env.HARVEST_RPM_URL}" \\
+                                --extra-vars "secrets_json_path=/dev/shm/monitoring_secrets/secrets.json" \\
                                 --extra-vars "ansible_user=\${SSH_USER}" \\
                                 --private-key=\${SSH_KEY} \\
                                 ${params.DEBUG ? '-vvv' : '-v'}

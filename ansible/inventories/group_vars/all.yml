@@ -55,17 +55,16 @@ vault_agent_group: "{{ kae_stend }}-lnx-va-read"
 # RLM (Resource Lifecycle Management) - корпоративный инструмент
 # для автоматизированной установки ПО через заявки
 # 
-# ВАЖНО: Эти переменные передаются через extra-vars из Jenkins:
-# - rlm_api_url: из params.RLM_API_URL
-# - prometheus_rpm_url: из Vault (params.RPM_URL_KV -> prometheus)
-# - grafana_rpm_url: из Vault (params.RPM_URL_KV -> grafana)
-# - harvest_rpm_url: из Vault (params.RPM_URL_KV -> harvest)
+# ВАЖНО: 
+# - rlm_api_url: передается через extra-vars из Jenkins (params.RLM_API_URL)
+# - RPM URLs: извлекаются из /dev/shm/monitoring_secrets/secrets.json на целевом сервере
+#   (Jenkins получает их из Vault и передает через tmpfs, Ansible читает оттуда)
 # 
-# Дефолтные значения ниже используются только если не переданы из Jenkins
+# Дефолтное значение используется только если не передано из Jenkins
 rlm_api_url: "https://rlm.sigma.sbrf.ru"
-prometheus_rpm_url: ""
-grafana_rpm_url: ""
-harvest_rpm_url: ""
+
+# Путь к secrets.json (передается через extra-vars)
+secrets_json_path: "/dev/shm/monitoring_secrets/secrets.json"
 
 # ==============================================================================
 # VAULT / SECMAN ПАРАМЕТРЫ
