@@ -46,40 +46,40 @@ template {
     "prometheus": {{ .Data.prometheus | toJSON }},
     "grafana": {{ .Data.grafana | toJSON }}
     {{- end -}}
-  },
+  }{% endraw %}{% if tuz_kv is defined and tuz_kv != 'null' and tuz_kv != '' %},{% raw %}
   "tuz": {
     {{- with secret {% endraw %}"{{ tuz_kv }}"{% raw %} -}}
     "pass": {{ .Data.pass | toJSON }},
     "user": {{ .Data.user | toJSON }}
     {{- end -}}
-  },
+  }{% endraw %}{% endif %}{% if netapp_ssh_kv is defined and netapp_ssh_kv != 'null' and netapp_ssh_kv != '' %},{% raw %}
   "netapp_ssh": {
     {{- with secret {% endraw %}"{{ netapp_ssh_kv }}"{% raw %} -}}
     "addr": {{ .Data.addr | toJSON }},
     "user": {{ .Data.user | toJSON }},
     "pass": {{ .Data.pass | toJSON }}
     {{- end -}}
-  },
+  }{% endraw %}{% endif %}{% if mon_ssh_kv is defined and mon_ssh_kv != 'null' and mon_ssh_kv != '' %},{% raw %}
   "mon_ssh": {
     {{- with secret {% endraw %}"{{ mon_ssh_kv }}"{% raw %} -}}
     "addr": {{ .Data.addr | toJSON }},
     "user": {{ .Data.user | toJSON }},
     "pass": {{ .Data.pass | toJSON }}
     {{- end -}}
-  },
+  }{% endraw %}{% endif %}{% if netapp_api_kv is defined and netapp_api_kv != 'null' and netapp_api_kv != '' %},{% raw %}
   "netapp_api": {
     {{- with secret {% endraw %}"{{ netapp_api_kv }}"{% raw %} -}}
     "addr": {{ .Data.addr | toJSON }},
     "user": {{ .Data.user | toJSON }},
     "pass": {{ .Data.pass | toJSON }}
     {{- end -}}
-  },
+  }{% endraw %}{% endif %}{% if grafana_web_kv is defined and grafana_web_kv != 'null' and grafana_web_kv != '' %},{% raw %}
   "grafana_web": {
     {{- with secret {% endraw %}"{{ grafana_web_kv }}"{% raw %} -}}
     "user": {{ .Data.user | toJSON }},
     "pass": {{ .Data.pass | toJSON }}
     {{- end -}}
-  }
+  }{% endraw %}{% endif %}{% raw %}
 }
 {% endraw %}
 EOT
