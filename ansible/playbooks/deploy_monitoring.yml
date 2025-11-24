@@ -20,7 +20,7 @@
 # ==============================================================================
 
 - name: "Предварительные проверки"
-  hosts: monitoring_servers
+  hosts: all
   gather_facts: yes
   become: no
   tags: [always]
@@ -51,7 +51,7 @@
 # ==============================================================================
 
 - name: "ЭТАП 1: Подготовка инфраструктуры"
-  hosts: monitoring_servers
+  hosts: all
   gather_facts: yes
   become: yes
   become_user: root
@@ -66,7 +66,7 @@
 # ==============================================================================
 
 - name: "ЭТАП 2: Настройка Vault Agent для управления секретами"
-  hosts: monitoring_servers
+  hosts: all
   gather_facts: no
   become: yes
   become_user: "{{ monitoring_service_user }}"
@@ -140,7 +140,7 @@
 # ==============================================================================
 
 - name: "ЭТАП 3: Установка и настройка Prometheus"
-  hosts: monitoring_servers
+  hosts: all
   gather_facts: no
   become: yes
   tags: [prometheus, install]
@@ -202,7 +202,7 @@
 # ==============================================================================
 
 - name: "ЭТАП 4: Установка и настройка Grafana"
-  hosts: monitoring_servers
+  hosts: all
   gather_facts: no
   become: yes
   tags: [grafana, install]
@@ -246,7 +246,7 @@
 # ==============================================================================
 
 - name: "ЭТАП 5: Установка и настройка Harvest"
-  hosts: monitoring_servers
+  hosts: all
   gather_facts: no
   become: yes
   tags: [harvest, install]
@@ -290,7 +290,7 @@
 # ==============================================================================
 
 - name: "ЭТАП 6: Проверка безопасности и верификация установки"
-  hosts: monitoring_servers
+  hosts: all
   gather_facts: no
   become: yes
   become_user: root
@@ -348,7 +348,7 @@
 # ==============================================================================
 
 - name: "Финальный отчет о развертывании"
-  hosts: monitoring_servers
+  hosts: all
   gather_facts: no
   tags: [always]
   
