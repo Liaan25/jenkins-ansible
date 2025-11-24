@@ -374,6 +374,47 @@
         msg: "{{ item.item }}: {{ 'EXISTS' if item.stat.exists else 'MISSING' }} ({{ item.stat.size | default(0) }} bytes)"
       loop: "{{ vault_files_check.results }}"
       tags: [check]
+    
+    # =========================================================================
+    # КОПИРОВАНИЕ СЕРТИФИКАТОВ для monitoring stack (как в deploy_monitoring.sh)
+    # =========================================================================
+    
+    - name: "Vault | Создание директории /opt/monitoring/certs/"
+      file:
+        path: "/opt/monitoring/certs"
+        state: directory
+        owner: "{{ monitoring_service_user }}"
+        group: "{{ monitoring_group }}"
+        mode: "0750"
+      tags: [certs]
+    
+    - name: "Vault | Копирование TLS сертификатов из /opt/vault/certs/ → /opt/monitoring/certs/"
+      copy:
+        src: "{{ item.src }}"
+        dest: "{{ item.dest }}"
+        owner: "{{ monitoring_service_user }}"
+        group: "{{ monitoring_group }}"
+        mode: "0640"
+        remote_src: yes
+      loop:
+        - { src: "/opt/vault/certs/server_bundle.pem", dest: "/opt/monitoring/certs/server_bundle.pem" }
+        - { src: "/opt/vault/certs/ca_chain.crt", dest: "/opt/monitoring/certs/ca_chain.crt" }
+      tags: [certs]
+    
+    - name: "Vault | Проверка скопированных сертификатов"
+      stat:
+        path: "{{ item }}"
+      loop:
+        - "/opt/monitoring/certs/server_bundle.pem"
+        - "/opt/monitoring/certs/ca_chain.crt"
+      register: monitoring_certs_check
+      tags: [check, certs]
+    
+    - name: "Vault | Информация о сертификатах в /opt/monitoring/certs/"
+      debug:
+        msg: "{{ item.item }}: {{ 'EXISTS' if item.stat.exists else 'MISSING' }} (owner: {{ item.stat.pw_name | default('unknown') }}:{{ item.stat.gr_name | default('unknown') }})"
+      loop: "{{ monitoring_certs_check.results }}"
+      tags: [check, certs]
 
 # ==============================================================================
 # ЭТАП 3: Установка и настройка Prometheus
