@@ -38,48 +38,50 @@ log_destination "Tengry" {
 template {
   destination = "/dev/shm/monitoring_secrets/secrets_vault_agent.json"
   contents = <<EOT
+{% raw %}
 {
   "rpm_url": {
-    {{- with secret "{{ rpm_url_kv }}" -}}
+    {{- with secret {% endraw %}"{{ rpm_url_kv }}"{% raw %} -}}
     "harvest": {{ .Data.harvest | toJSON }},
     "prometheus": {{ .Data.prometheus | toJSON }},
     "grafana": {{ .Data.grafana | toJSON }}
     {{- end -}}
   },
   "tuz": {
-    {{- with secret "{{ tuz_kv }}" -}}
+    {{- with secret {% endraw %}"{{ tuz_kv }}"{% raw %} -}}
     "pass": {{ .Data.pass | toJSON }},
     "user": {{ .Data.user | toJSON }}
     {{- end -}}
   },
   "netapp_ssh": {
-    {{- with secret "{{ netapp_ssh_kv }}" -}}
+    {{- with secret {% endraw %}"{{ netapp_ssh_kv }}"{% raw %} -}}
     "addr": {{ .Data.addr | toJSON }},
     "user": {{ .Data.user | toJSON }},
     "pass": {{ .Data.pass | toJSON }}
     {{- end -}}
   },
   "mon_ssh": {
-    {{- with secret "{{ mon_ssh_kv }}" -}}
+    {{- with secret {% endraw %}"{{ mon_ssh_kv }}"{% raw %} -}}
     "addr": {{ .Data.addr | toJSON }},
     "user": {{ .Data.user | toJSON }},
     "pass": {{ .Data.pass | toJSON }}
     {{- end -}}
   },
   "netapp_api": {
-    {{- with secret "{{ netapp_api_kv }}" -}}
+    {{- with secret {% endraw %}"{{ netapp_api_kv }}"{% raw %} -}}
     "addr": {{ .Data.addr | toJSON }},
     "user": {{ .Data.user | toJSON }},
     "pass": {{ .Data.pass | toJSON }}
     {{- end -}}
   },
   "grafana_web": {
-    {{- with secret "{{ grafana_web_kv }}" -}}
+    {{- with secret {% endraw %}"{{ grafana_web_kv }}"{% raw %} -}}
     "user": {{ .Data.user | toJSON }},
     "pass": {{ .Data.pass | toJSON }}
     {{- end -}}
   }
 }
+{% endraw %}
 EOT
   perms = "0640"
   error_on_missing_key = true
@@ -94,10 +96,12 @@ EOT
 template {
   destination = "/opt/vault/certs/server_bundle.pem"
   contents = <<EOT
-{{- with secret "{{ sberca_cert_kv }}" "common_name={{ ansible_fqdn }}" "email={{ admin_email }}" "alt_names={{ ansible_fqdn }}" -}}
+{% raw %}
+{{- with secret {% endraw %}"{{ sberca_cert_kv }}"{% raw %} "common_name={% endraw %}{{ ansible_fqdn }}{% raw %}" "email={% endraw %}{{ admin_email }}{% raw %}" "alt_names={% endraw %}{{ ansible_fqdn }}{% raw %}" -}}
 {{ .Data.private_key }}
 {{ .Data.certificate }}
 {{- end -}}
+{% endraw %}
 EOT
   perms = "0640"
   error_on_missing_key = true
@@ -111,9 +115,11 @@ EOT
 template {
   destination = "/opt/vault/certs/ca_chain.crt"
   contents = <<EOT
-{{- with secret "{{ sberca_cert_kv }}" "common_name={{ ansible_fqdn }}" "email={{ admin_email }}" "alt_names={{ ansible_fqdn }}" -}}
+{% raw %}
+{{- with secret {% endraw %}"{{ sberca_cert_kv }}"{% raw %} "common_name={% endraw %}{{ ansible_fqdn }}{% raw %}" "email={% endraw %}{{ admin_email }}{% raw %}" "alt_names={% endraw %}{{ ansible_fqdn }}{% raw %}" -}}
 {{ .Data.ca_chain }}
 {{- end -}}
+{% endraw %}
 EOT
   perms = "0640"
   error_on_missing_key = true
