@@ -299,7 +299,7 @@ pipeline {
                         echo "Проверка: состоят ли пользователи в группе ${env.USER_SYS}..."
                         
                         def checkScript = """
-                            ssh -i "\${SSH_KEY}" -o StrictHostKeyChecking=no -o LogLevel=ERROR "\${SSH_USER}@${params.SERVER_ADDRESS}" << 'CHECK_EOF'
+                            ssh -i "\${SSH_KEY}" -o StrictHostKeyChecking=no -o LogLevel=ERROR -q "\${SSH_USER}@${params.SERVER_ADDRESS}" << 'CHECK_EOF'
 # Проверка каждого пользователя
 users_to_check="${env.USER_CI} ${env.USER_ADMIN} ${env.USER_RO}"
 missing_users=""
@@ -637,8 +637,8 @@ CHECK_EOF
                     dir('ansible_project') {
                         checkout scm
                         
-                        // Создание inventory для целевого сервера
-                        writeFile file: 'inventories/dynamic_inventory', text: """
+                        // Создание inventory для целевого сервера в правильной директории
+                        writeFile file: 'secure_deployment/ansible/inventories/dynamic_inventory', text: """
 [monitoring_servers]
 ${params.SERVER_ADDRESS} ansible_host=${params.SERVER_ADDRESS}
 
@@ -701,7 +701,7 @@ ${params.DEBUG ? """
 echo "========================================================================"
 echo "DEBUG: ИНФОРМАЦИЯ О ТЕКУЩЕМ ПОЛЬЗОВАТЕЛЕ SSH"
 echo "========================================================================"
-ssh -i "\${SSH_KEY}" -o StrictHostKeyChecking=no -o LogLevel=ERROR "\${SSH_USER}@${params.SERVER_ADDRESS}" << 'DEBUG_EOF'
+ssh -i "\${SSH_KEY}" -o StrictHostKeyChecking=no -o LogLevel=ERROR -q "\${SSH_USER}@${params.SERVER_ADDRESS}" << 'DEBUG_EOF'
 echo "1. Текущий пользователь:"
 whoami
 echo ""
@@ -757,32 +757,32 @@ echo ""
 
 echo "[INFO] Создание директории для секретов в /dev/shm..."
 # Шаг 1: Создание директории от root
-ssh -i "\${SSH_KEY}" -o StrictHostKeyChecking=no -o LogLevel=ERROR "\${SSH_USER}@${params.SERVER_ADDRESS}" \\
+ssh -i "\${SSH_KEY}" -o StrictHostKeyChecking=no -o LogLevel=ERROR -q "\${SSH_USER}@${params.SERVER_ADDRESS}" \\
     "sudo mkdir -p ${REMOTE_SECRETS_DIR}"
 
 # Шаг 1.5: ВАЖНО! Сброс прав на 755 (может остаться 700 с предыдущего запуска)
 # Это позволит работать с директорией и удалять файлы
 echo "[INFO] Сброс прав на директорию для очистки старых файлов..."
-ssh -i "\${SSH_KEY}" -o StrictHostKeyChecking=no -o LogLevel=ERROR "\${SSH_USER}@${params.SERVER_ADDRESS}" \\
+ssh -i "\${SSH_KEY}" -o StrictHostKeyChecking=no -o LogLevel=ERROR -q "\${SSH_USER}@${params.SERVER_ADDRESS}" \\
     "sudo chmod 755 ${REMOTE_SECRETS_DIR}"
 
 # Шаг 1.6: Удаление старых файлов (ПЕРЕД установкой владельца)
 echo "[INFO] Очистка старых файлов secrets.json, role_id.txt, secret_id.txt..."
-ssh -i "\${SSH_KEY}" -o StrictHostKeyChecking=no -o LogLevel=ERROR "\${SSH_USER}@${params.SERVER_ADDRESS}" \\
+ssh -i "\${SSH_KEY}" -o StrictHostKeyChecking=no -o LogLevel=ERROR -q "\${SSH_USER}@${params.SERVER_ADDRESS}" \\
     "sudo rm -f ${REMOTE_SECRETS_DIR}/secrets.json ${REMOTE_SECRETS_DIR}/role_id.txt ${REMOTE_SECRETS_DIR}/secret_id.txt"
 
 # Шаг 2: Установка владельца SSH_USER (для записи)
 # SSH_USER (mvp_dev) временно становится владельцем для записи файла
-ssh -i "\${SSH_KEY}" -o StrictHostKeyChecking=no -o LogLevel=ERROR "\${SSH_USER}@${params.SERVER_ADDRESS}" \\
+ssh -i "\${SSH_KEY}" -o StrictHostKeyChecking=no -o LogLevel=ERROR -q "\${SSH_USER}@${params.SERVER_ADDRESS}" \\
     "sudo chown \${SSH_USER}:${env.USER_SYS} ${REMOTE_SECRETS_DIR}"
 
 # Шаг 3: Установка прав 750 (владелец может писать, группа читать, остальные нет)
-ssh -i "\${SSH_KEY}" -o StrictHostKeyChecking=no -o LogLevel=ERROR "\${SSH_USER}@${params.SERVER_ADDRESS}" \\
+ssh -i "\${SSH_KEY}" -o StrictHostKeyChecking=no -o LogLevel=ERROR -q "\${SSH_USER}@${params.SERVER_ADDRESS}" \\
     "sudo chmod 750 ${REMOTE_SECRETS_DIR}"
 
 ${params.DEBUG ? """
 echo "[DEBUG] После создания директории и установки владельца SSH_USER:"
-ssh -i "\${SSH_KEY}" -o StrictHostKeyChecking=no -o LogLevel=ERROR "\${SSH_USER}@${params.SERVER_ADDRESS}" << 'DEBUG_EOF2'
+ssh -i "\${SSH_KEY}" -o StrictHostKeyChecking=no -o LogLevel=ERROR -q "\${SSH_USER}@${params.SERVER_ADDRESS}" << 'DEBUG_EOF2'
 echo "  - Права на директорию:"
 ls -lad ${REMOTE_SECRETS_DIR}
 echo "  - Владелец директории:"
@@ -801,7 +801,7 @@ ${params.DEBUG ? "ls -lh ${WORKSPACE_LOCAL}/secrets.json" : ''}
 echo "[INFO] Передача секретов через SSH pipe (от имени SSH_USER - владельца директории)..."
 ${params.DEBUG ? """
 echo "[DEBUG] Проверка прав SSH_USER:"
-ssh -i "\${SSH_KEY}" -o StrictHostKeyChecking=no -o LogLevel=ERROR "\${SSH_USER}@${params.SERVER_ADDRESS}" << 'DEBUG_EOF3'
+ssh -i "\${SSH_KEY}" -o StrictHostKeyChecking=no -o LogLevel=ERROR -q "\${SSH_USER}@${params.SERVER_ADDRESS}" << 'DEBUG_EOF3'
 echo "  - Текущий пользователь SSH:"
 whoami
 id
@@ -813,12 +813,12 @@ DEBUG_EOF3
 echo ""
 """ : ''}
 
-cat ${WORKSPACE_LOCAL}/secrets.json | ssh -i "\${SSH_KEY}" -o StrictHostKeyChecking=no -o LogLevel=ERROR "\${SSH_USER}@${params.SERVER_ADDRESS}" \\
+cat ${WORKSPACE_LOCAL}/secrets.json | ssh -i "\${SSH_KEY}" -o StrictHostKeyChecking=no -o LogLevel=ERROR -q "\${SSH_USER}@${params.SERVER_ADDRESS}" \\
     "tee ${REMOTE_SECRETS_DIR}/secrets.json > /dev/null"
 
 ${params.DEBUG ? 'echo "[DEBUG] Удаленный файл secrets.json после копирования (от SSH_USER):"' : ''}
 ${params.DEBUG ? """
-ssh -i "\${SSH_KEY}" -o StrictHostKeyChecking=no -o LogLevel=ERROR "\${SSH_USER}@${params.SERVER_ADDRESS}" << 'DEBUG_EOF4'
+ssh -i "\${SSH_KEY}" -o StrictHostKeyChecking=no -o LogLevel=ERROR -q "\${SSH_USER}@${params.SERVER_ADDRESS}" << 'DEBUG_EOF4'
 echo "  - Существование файла:"
 ls -lh ${REMOTE_SECRETS_DIR}/secrets.json 2>&1 || echo "  Файл НЕ создан!"
 echo "  - Размер файла:"
@@ -831,18 +831,18 @@ echo ""
 
 echo "[INFO] Установка финальных прав: передача владения SYS_USER и ограничение доступа..."
 # Шаг 1: Передать владение директории и всех файлов SYS_USER:SYS_GROUP
-ssh -i "\${SSH_KEY}" -o StrictHostKeyChecking=no -o LogLevel=ERROR "\${SSH_USER}@${params.SERVER_ADDRESS}" \\
+ssh -i "\${SSH_KEY}" -o StrictHostKeyChecking=no -o LogLevel=ERROR -q "\${SSH_USER}@${params.SERVER_ADDRESS}" \\
     "sudo chown -R ${env.USER_SYS}:${env.USER_SYS} ${REMOTE_SECRETS_DIR}"
 
 # Шаг 2: Установить финальные права (700 на директорию, 600 на файлы)
-ssh -i "\${SSH_KEY}" -o StrictHostKeyChecking=no -o LogLevel=ERROR "\${SSH_USER}@${params.SERVER_ADDRESS}" \\
+ssh -i "\${SSH_KEY}" -o StrictHostKeyChecking=no -o LogLevel=ERROR -q "\${SSH_USER}@${params.SERVER_ADDRESS}" \\
     "sudo chmod 700 ${REMOTE_SECRETS_DIR}"
-ssh -i "\${SSH_KEY}" -o StrictHostKeyChecking=no -o LogLevel=ERROR "\${SSH_USER}@${params.SERVER_ADDRESS}" \\
+ssh -i "\${SSH_KEY}" -o StrictHostKeyChecking=no -o LogLevel=ERROR -q "\${SSH_USER}@${params.SERVER_ADDRESS}" \\
     "sudo chmod 600 ${REMOTE_SECRETS_DIR}/secrets.json"
 
 ${params.DEBUG ? 'echo "[DEBUG] Финальные права на secrets.json (теперь принадлежит SYS_USER):"' : ''}
 ${params.DEBUG ? """
-ssh -i "\${SSH_KEY}" -o StrictHostKeyChecking=no -o LogLevel=ERROR "\${SSH_USER}@${params.SERVER_ADDRESS}" << 'DEBUG_EOF5'
+ssh -i "\${SSH_KEY}" -o StrictHostKeyChecking=no -o LogLevel=ERROR -q "\${SSH_USER}@${params.SERVER_ADDRESS}" << 'DEBUG_EOF5'
 echo "  - Директория ${REMOTE_SECRETS_DIR}:"
 sudo -u ${env.USER_SYS} ls -lad ${REMOTE_SECRETS_DIR}
 echo "  - Файл secrets.json:"
@@ -853,16 +853,16 @@ echo ""
 
 echo "[INFO] Развёртывание wrapper скрипта для извлечения секретов..."
 # Создание директории для wrapper скриптов (если не существует)
-ssh -i "\${SSH_KEY}" -o StrictHostKeyChecking=no -o LogLevel=ERROR "\${SSH_USER}@${params.SERVER_ADDRESS}" \\
+ssh -i "\${SSH_KEY}" -o StrictHostKeyChecking=no -o LogLevel=ERROR -q "\${SSH_USER}@${params.SERVER_ADDRESS}" \\
     "sudo mkdir -p /opt/monitoring/scripts/wrappers"
 
 # Копирование wrapper скрипта на сервер
-scp -i "\${SSH_KEY}" -o StrictHostKeyChecking=no -o LogLevel=ERROR \\
+scp -i "\${SSH_KEY}" -o StrictHostKeyChecking=no -o LogLevel=ERROR -q \\
     ${WORKSPACE}/scripts/wrappers/extract_vault_secrets.sh \\
     "\${SSH_USER}@${params.SERVER_ADDRESS}:/tmp/extract_vault_secrets.sh"
 
 # Перемещение скрипта в целевую директорию с правильными правами
-ssh -i "\${SSH_KEY}" -o StrictHostKeyChecking=no -o LogLevel=ERROR "\${SSH_USER}@${params.SERVER_ADDRESS}" \\
+ssh -i "\${SSH_KEY}" -o StrictHostKeyChecking=no -o LogLevel=ERROR -q "\${SSH_USER}@${params.SERVER_ADDRESS}" \\
     "sudo mv /tmp/extract_vault_secrets.sh /opt/monitoring/scripts/wrappers/extract_vault_secrets.sh && \\
      sudo chown root:${env.USER_SYS} /opt/monitoring/scripts/wrappers/extract_vault_secrets.sh && \\
      sudo chmod 750 /opt/monitoring/scripts/wrappers/extract_vault_secrets.sh"
@@ -870,11 +870,11 @@ ssh -i "\${SSH_KEY}" -o StrictHostKeyChecking=no -o LogLevel=ERROR "\${SSH_USER}
 echo "[INFO] Распаковка секретов в отдельные файлы (через wrapper скрипт)..."
 # Используем wrapper скрипт extract_vault_secrets.sh для безопасного извлечения
 # Скрипт защищён SHA256 в sudoers
-ssh -i "\${SSH_KEY}" -o StrictHostKeyChecking=no -o LogLevel=ERROR "\${SSH_USER}@${params.SERVER_ADDRESS}" \\
+ssh -i "\${SSH_KEY}" -o StrictHostKeyChecking=no -o LogLevel=ERROR -q "\${SSH_USER}@${params.SERVER_ADDRESS}" \\
     "sudo -u ${env.USER_SYS} -g ${env.USER_SYS} /opt/monitoring/scripts/wrappers/extract_vault_secrets.sh"
 
 ${params.DEBUG ? 'echo "[DEBUG] Созданные файлы секретов:"' : ''}
-${params.DEBUG ? "ssh -i \"\${SSH_KEY}\" -o StrictHostKeyChecking=no -o LogLevel=ERROR \"\${SSH_USER}@${params.SERVER_ADDRESS}\" \"sudo -u ${env.USER_SYS} -g ${env.USER_SYS} ls -lh ${REMOTE_SECRETS_DIR}/\"" : ''}
+${params.DEBUG ? "ssh -i \"\${SSH_KEY}\" -o StrictHostKeyChecking=no -o LogLevel=ERROR -q \"\${SSH_USER}@${params.SERVER_ADDRESS}\" \"sudo -u ${env.USER_SYS} -g ${env.USER_SYS} ls -lh ${REMOTE_SECRETS_DIR}/\"" : ''}
 
 echo "[SUCCESS] Секреты успешно переданы и размещены в ${REMOTE_SECRETS_DIR}"
                         """
@@ -955,14 +955,14 @@ echo "[SUCCESS] Секреты успешно переданы и размеще
                         if (params.DEBUG) {
                             echo "DEBUG: Проверка файлов на удаленном сервере перед security check..."
                             sh """
-                                ssh -i "\${SSH_KEY}" -o StrictHostKeyChecking=no -o LogLevel=ERROR "\${SSH_USER}@${params.SERVER_ADDRESS}" \\
+                                ssh -i "\${SSH_KEY}" -o StrictHostKeyChecking=no -o LogLevel=ERROR -q "\${SSH_USER}@${params.SERVER_ADDRESS}" \\
                                     'ls -laR /opt/monitoring/ 2>/dev/null | head -50 || echo "Cannot list /opt/monitoring"'
                             """
                         }
                         
                         def securityCheckResult = sh(
                             script: """
-                                ssh -i "\${SSH_KEY}" -o StrictHostKeyChecking=no -o LogLevel=ERROR "\${SSH_USER}@${params.SERVER_ADDRESS}" \\
+                                ssh -i "\${SSH_KEY}" -o StrictHostKeyChecking=no -o LogLevel=ERROR -q "\${SSH_USER}@${params.SERVER_ADDRESS}" \\
                                     'sudo bash /opt/monitoring/scripts/verify_security.sh'
                             """,
                             returnStatus: true
@@ -999,7 +999,7 @@ echo "[SUCCESS] Секреты успешно переданы и размеще
                     ]) {
                         // Проверка статуса сервисов
                         sh """
-                            ssh -i "\${SSH_KEY}" -o StrictHostKeyChecking=no -o LogLevel=ERROR "\${SSH_USER}@${params.SERVER_ADDRESS}" << 'EOF'
+                            ssh -i "\${SSH_KEY}" -o StrictHostKeyChecking=no -o LogLevel=ERROR -q "\${SSH_USER}@${params.SERVER_ADDRESS}" << 'EOF'
 echo "=========================================="
 echo "ПРОВЕРКА СТАТУСА СЕРВИСОВ:"
 echo "=========================================="
@@ -1046,7 +1046,7 @@ EOF
                     ]) {
                         // Очистка секретов на удаленном сервере
                         sh """
-                            ssh -i "\${SSH_KEY}" -o StrictHostKeyChecking=no -o LogLevel=ERROR "\${SSH_USER}@${params.SERVER_ADDRESS}" \\
+                            ssh -i "\${SSH_KEY}" -o StrictHostKeyChecking=no -o LogLevel=ERROR -q "\${SSH_USER}@${params.SERVER_ADDRESS}" \\
                                 'sudo bash /opt/monitoring/scripts/cleanup_secrets.sh'
                         """
                         
@@ -1077,7 +1077,7 @@ EOF
                 }
                 
                 def serverDomain = sh(
-                    script: """ssh -i "\${SSH_KEY}" -o StrictHostKeyChecking=no -o LogLevel=ERROR "\${SSH_USER}@${params.SERVER_ADDRESS}" 'hostname -f' || echo '${params.SERVER_ADDRESS}'""",
+                    script: """ssh -i "\${SSH_KEY}" -o StrictHostKeyChecking=no -o LogLevel=ERROR -q "\${SSH_USER}@${params.SERVER_ADDRESS}" 'hostname -f' || echo '${params.SERVER_ADDRESS}'""",
                     returnStdout: true
                 ).trim()
                 
