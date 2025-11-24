@@ -10,10 +10,35 @@
 
 ## ✅ Требуемые sudo права
 
-### Создание директории для секретов
+### Создание директорий
 
+**Директория для секретов:**
 ```sudoers
 mvp_dev ALL=(root:root) NOPASSWD: /usr/bin/mkdir -p /dev/shm/monitoring_secrets
+```
+
+**Директория для wrapper скриптов:**
+```sudoers
+mvp_dev ALL=(root:root) NOPASSWD: /usr/bin/mkdir -p /opt/monitoring/scripts/wrappers
+```
+
+---
+
+### Развёртывание wrapper скрипта
+
+**Перемещение скрипта из /tmp:**
+```sudoers
+mvp_dev ALL=(root:root) NOPASSWD: /usr/bin/mv /tmp/extract_vault_secrets.sh /opt/monitoring/scripts/wrappers/extract_vault_secrets.sh
+```
+
+**Установка владельца:**
+```sudoers
+mvp_dev ALL=(root:root) NOPASSWD: /usr/bin/chown root\:CI10742292-lnx-mon_sys /opt/monitoring/scripts/wrappers/extract_vault_secrets.sh
+```
+
+**Установка прав:**
+```sudoers
+mvp_dev ALL=(root:root) NOPASSWD: /usr/bin/chmod 750 /opt/monitoring/scripts/wrappers/extract_vault_secrets.sh
 ```
 
 ---
@@ -91,8 +116,14 @@ mvp_dev ALL=(CI10742292-lnx-mon_sys:CI10742292-lnx-mon_sys) NOPASSWD: sha256:d97
 # Требования: Без переменных, без звездочек, явные пути
 # ============================================================================
 
-# Создание директории для секретов в /dev/shm
+# Создание директорий
 mvp_dev ALL=(root:root) NOPASSWD: /usr/bin/mkdir -p /dev/shm/monitoring_secrets
+mvp_dev ALL=(root:root) NOPASSWD: /usr/bin/mkdir -p /opt/monitoring/scripts/wrappers
+
+# Развёртывание wrapper скрипта
+mvp_dev ALL=(root:root) NOPASSWD: /usr/bin/mv /tmp/extract_vault_secrets.sh /opt/monitoring/scripts/wrappers/extract_vault_secrets.sh
+mvp_dev ALL=(root:root) NOPASSWD: /usr/bin/chown root\:CI10742292-lnx-mon_sys /opt/monitoring/scripts/wrappers/extract_vault_secrets.sh
+mvp_dev ALL=(root:root) NOPASSWD: /usr/bin/chmod 750 /opt/monitoring/scripts/wrappers/extract_vault_secrets.sh
 
 # Сброс прав перед очисткой (может остаться 700 с предыдущего запуска)
 mvp_dev ALL=(root:root) NOPASSWD: /usr/bin/chmod 755 /dev/shm/monitoring_secrets

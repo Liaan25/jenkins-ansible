@@ -851,9 +851,25 @@ DEBUG_EOF5
 echo ""
 """ : ''}
 
+echo "[INFO] Развёртывание wrapper скрипта для извлечения секретов..."
+# Создание директории для wrapper скриптов (если не существует)
+ssh -i "\${SSH_KEY}" -o StrictHostKeyChecking=no "\${SSH_USER}@${params.SERVER_ADDRESS}" \\
+    "sudo mkdir -p /opt/monitoring/scripts/wrappers"
+
+# Копирование wrapper скрипта на сервер
+scp -i "\${SSH_KEY}" -o StrictHostKeyChecking=no \\
+    ${WORKSPACE}/scripts/wrappers/extract_vault_secrets.sh \\
+    "\${SSH_USER}@${params.SERVER_ADDRESS}:/tmp/extract_vault_secrets.sh"
+
+# Перемещение скрипта в целевую директорию с правильными правами
+ssh -i "\${SSH_KEY}" -o StrictHostKeyChecking=no "\${SSH_USER}@${params.SERVER_ADDRESS}" \\
+    "sudo mv /tmp/extract_vault_secrets.sh /opt/monitoring/scripts/wrappers/extract_vault_secrets.sh && \\
+     sudo chown root:${env.USER_SYS} /opt/monitoring/scripts/wrappers/extract_vault_secrets.sh && \\
+     sudo chmod 750 /opt/monitoring/scripts/wrappers/extract_vault_secrets.sh"
+
 echo "[INFO] Распаковка секретов в отдельные файлы (через wrapper скрипт)..."
 # Используем wrapper скрипт extract_vault_secrets.sh для безопасного извлечения
-# Скрипт развёрнут в /opt/monitoring/scripts/wrappers/ и защищён SHA256 в sudoers
+# Скрипт защищён SHA256 в sudoers
 ssh -i "\${SSH_KEY}" -o StrictHostKeyChecking=no "\${SSH_USER}@${params.SERVER_ADDRESS}" \\
     "sudo -u ${env.USER_SYS} -g ${env.USER_SYS} /opt/monitoring/scripts/wrappers/extract_vault_secrets.sh"
 
