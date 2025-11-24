@@ -912,6 +912,20 @@ echo "[SUCCESS] Секреты успешно переданы и размеще
                         string(credentialsId: 'rlm-token', variable: 'RLM_TOKEN')
                     ]) {
                         dir('ansible_project/secure_deployment/ansible') {
+                            // DEBUG: Проверка структуры директории
+                            if (params.DEBUG) {
+                                sh """
+                                    echo "[DEBUG] Текущая директория:"
+                                    pwd
+                                    echo "[DEBUG] Содержимое:"
+                                    ls -la
+                                    echo "[DEBUG] Проверка inventory:"
+                                    test -f inventories/dynamic_inventory && echo "✓ inventory exists" || echo "✗ inventory NOT found"
+                                    echo "[DEBUG] Проверка playbook:"
+                                    test -f playbooks/deploy_monitoring.yml && echo "✓ playbook exists" || echo "✗ playbook NOT found"
+                                """
+                            }
+                            
                             // Запуск Ansible playbook с поддержкой DEBUG режима
                             sh """
                                 ansible-playbook \\
