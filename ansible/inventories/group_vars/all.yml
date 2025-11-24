@@ -16,19 +16,27 @@ monitoring_base_dir: "/opt/monitoring"
 # Формат имени: {{ kae_stend }}-lnx-mon_<тип>
 # Пример: CI10742292-lnx-mon_sys
 
-# KAE стенд (извлекается из NAMESPACE_CI)
-kae_stend: "{{ kae_stend | default('KPRJ000000') }}"
+# KAE стенд (извлекается из NAMESPACE_CI в Jenkins, передаётся через inventory)
+# Дефолтное значение используется только если НЕ передано через inventory
+kae_stend: "KPRJ000000"
 
-# Динамические имена пользователей
-monitoring_service_user: "{{ user_sys | default(kae_stend + '-lnx-mon_sys') }}"
-monitoring_admin_user: "{{ user_admin | default(kae_stend + '-lnx-mon_admin') }}"
-monitoring_ci_user: "{{ user_ci | default(kae_stend + '-lnx-mon_ci') }}"
-monitoring_ro_user: "{{ user_ro | default(kae_stend + '-lnx-mon_ro') }}"
+# Базовые переменные пользователей (переопределяются из inventory)
+# Jenkins передаёт реальные значения через inventory [all:vars]
+user_sys: "{{ kae_stend }}-lnx-mon_sys"
+user_admin: "{{ kae_stend }}-lnx-mon_admin"
+user_ci: "{{ kae_stend }}-lnx-mon_ci"
+user_ro: "{{ kae_stend }}-lnx-mon_ro"
+
+# Динамические имена пользователей (используют user_* переменные из inventory)
+monitoring_service_user: "{{ user_sys }}"
+monitoring_admin_user: "{{ user_admin }}"
+monitoring_ci_user: "{{ user_ci }}"
+monitoring_ro_user: "{{ user_ro }}"
 
 # Динамическая группа (группа = имя СУЗ)
 # При создании СУЗ в IDM автоматически создается группа с тем же именем
 # Остальные пользователи добавляются в эту группу как secondary group
-monitoring_group: "{{ user_sys | default(kae_stend + '-lnx-mon_sys') }}"
+monitoring_group: "{{ user_sys }}"
 
 # ==============================================================================
 # VAULT / SECMAN ПАРАМЕТРЫ
