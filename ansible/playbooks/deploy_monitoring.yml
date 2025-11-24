@@ -199,7 +199,7 @@
         validate_certs: no
       register: prometheus_status
       until: prometheus_status.json.status in ['success', 'failed', 'error']
-      retries: 30
+      retries: 120
       delay: 10
       failed_when: prometheus_status.json.status in ['failed', 'error']
       tags: [rpm, prometheus]
@@ -235,7 +235,7 @@
         validate_certs: no
       register: grafana_status
       until: grafana_status.json.status in ['success', 'failed', 'error']
-      retries: 30
+      retries: 120
       delay: 10
       failed_when: grafana_status.json.status in ['failed', 'error']
       tags: [rpm, grafana]
@@ -271,7 +271,7 @@
         validate_certs: no
       register: harvest_status
       until: harvest_status.json.status in ['success', 'failed', 'error']
-      retries: 30
+      retries: 120
       delay: 10
       failed_when: harvest_status.json.status in ['failed', 'error']
       tags: [rpm, harvest]
