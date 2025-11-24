@@ -67,6 +67,20 @@ mvp_dev ALL=(root:root) NOPASSWD: /usr/bin/chmod 600 /dev/shm/monitoring_secrets
 
 ---
 
+### Извлечение секретов через wrapper скрипт
+
+**Выполнение от имени SYS_USER с защитой SHA256:**
+```sudoers
+# SHA256: d97273fb084bd80863abc5d62a1008b8cc160af476bdf41d932e337489208046
+mvp_dev ALL=(CI10742292-lnx-mon_sys:CI10742292-lnx-mon_sys) NOPASSWD: sha256:d97273fb084bd80863abc5d62a1008b8cc160af476bdf41d932e337489208046 /opt/monitoring/scripts/wrappers/extract_vault_secrets.sh
+```
+
+**Назначение:** Безопасное извлечение `role_id` и `secret_id` из `secrets.json` в отдельные файлы.
+
+**Почему SHA256?** Гарантирует, что выполняется только проверенный скрипт. Если содержимое скрипта изменится, sudo откажет в выполнении.
+
+---
+
 ## 📝 Полный файл sudoers для копирования в IDM
 
 ```sudoers
@@ -96,6 +110,10 @@ mvp_dev ALL=(root:root) NOPASSWD: /usr/bin/chown -R CI10742292-lnx-mon_sys\:CI10
 mvp_dev ALL=(root:root) NOPASSWD: /usr/bin/chmod 750 /dev/shm/monitoring_secrets
 mvp_dev ALL=(root:root) NOPASSWD: /usr/bin/chmod 700 /dev/shm/monitoring_secrets
 mvp_dev ALL=(root:root) NOPASSWD: /usr/bin/chmod 600 /dev/shm/monitoring_secrets/secrets.json
+
+# Извлечение секретов из JSON (wrapper скрипт с SHA256)
+# SHA256: d97273fb084bd80863abc5d62a1008b8cc160af476bdf41d932e337489208046
+mvp_dev ALL=(CI10742292-lnx-mon_sys:CI10742292-lnx-mon_sys) NOPASSWD: sha256:d97273fb084bd80863abc5d62a1008b8cc160af476bdf41d932e337489208046 /opt/monitoring/scripts/wrappers/extract_vault_secrets.sh
 
 # ============================================================================
 # КОНЕЦ ФАЙЛА

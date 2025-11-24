@@ -203,6 +203,7 @@ WRAPPER_SCRIPTS=(
     "manage_firewall.sh"
     "manage_vault_certs.sh"
     "call_rlm_api.sh"
+    "extract_vault_secrets.sh"
 )
 
 declare -A SCRIPT_HASHES
