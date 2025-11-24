@@ -923,15 +923,18 @@ echo "[SUCCESS] Секреты успешно переданы и размеще
                                     test -f inventories/dynamic_inventory && echo "✓ inventory exists" || echo "✗ inventory NOT found"
                                     echo "[DEBUG] Проверка playbook:"
                                     test -f playbooks/deploy_monitoring.yml && echo "✓ playbook exists" || echo "✗ playbook NOT found"
+                                    echo "[DEBUG] SSH_USER для Ansible: \${SSH_USER}"
                                 """
                             }
                             
                             // Запуск Ansible playbook с поддержкой DEBUG режима
+                            // Используем SSH_USER для подключения, так как у него есть ключ
                             sh """
                                 ansible-playbook \\
                                     -i inventories/dynamic_inventory \\
                                     playbooks/deploy_monitoring.yml \\
                                     --extra-vars "rlm_token=${RLM_TOKEN}" \\
+                                    --extra-vars "ansible_user=\${SSH_USER}" \\
                                     --private-key=\${SSH_KEY} \\
                                     ${params.DEBUG ? '-vvv' : '-v'}
                             """
