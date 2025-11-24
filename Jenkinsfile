@@ -806,13 +806,14 @@ echo "[INFO] Установка финальных прав: передача в
 ssh -i "\${SSH_KEY}" -o StrictHostKeyChecking=no -o LogLevel=ERROR -q "\${SSH_USER}@${params.SERVER_ADDRESS}" \\
     "sudo chown -R ${env.KAE_STEND}-lnx-va-start:${env.KAE_STEND}-lnx-va-read ${REMOTE_SECRETS_DIR}"
 
-# Шаг 2: Установить финальные права (750 на директорию, 640 на файлы)
+# Шаг 2: Установить финальные права (750 на директорию, 640 на secrets.json)
 # 750: vault_agent_user (rwx), vault_agent_group (r-x), other (---)
 # 640: vault_agent_user (rw-), vault_agent_group (r--), other (---)
+# NOTE: role_id.txt и secret_id.txt будут созданы позже wrapper скриптом
 ssh -i "\${SSH_KEY}" -o StrictHostKeyChecking=no -o LogLevel=ERROR -q "\${SSH_USER}@${params.SERVER_ADDRESS}" \\
     "sudo chmod 750 ${REMOTE_SECRETS_DIR}"
 ssh -i "\${SSH_KEY}" -o StrictHostKeyChecking=no -o LogLevel=ERROR -q "\${SSH_USER}@${params.SERVER_ADDRESS}" \\
-    "sudo chmod 640 ${REMOTE_SECRETS_DIR}/secrets.json ${REMOTE_SECRETS_DIR}/role_id.txt ${REMOTE_SECRETS_DIR}/secret_id.txt"
+    "sudo chmod 640 ${REMOTE_SECRETS_DIR}/secrets.json"
 
 ${params.DEBUG ? 'echo "[DEBUG] Финальные права на secrets (теперь принадлежит vault_agent_user):"' : ''}
 ${params.DEBUG ? """
@@ -847,8 +848,15 @@ echo "[INFO] Распаковка секретов в отдельные фай�
 ssh -i "\${SSH_KEY}" -o StrictHostKeyChecking=no -o LogLevel=ERROR -q "\${SSH_USER}@${params.SERVER_ADDRESS}" \\
     "sudo -u ${env.USER_SYS} -g ${env.USER_SYS} /opt/monitoring/scripts/wrappers/extract_vault_secrets.sh"
 
+echo "[INFO] Установка прав на role_id.txt и secret_id.txt для Vault Agent..."
+# Файлы созданы wrapper скриптом от SYS_USER, нужно передать владение vault_agent_user
+ssh -i "\${SSH_KEY}" -o StrictHostKeyChecking=no -o LogLevel=ERROR -q "\${SSH_USER}@${params.SERVER_ADDRESS}" \\
+    "sudo chown ${env.KAE_STEND}-lnx-va-start:${env.KAE_STEND}-lnx-va-read ${REMOTE_SECRETS_DIR}/role_id.txt ${REMOTE_SECRETS_DIR}/secret_id.txt"
+ssh -i "\${SSH_KEY}" -o StrictHostKeyChecking=no -o LogLevel=ERROR -q "\${SSH_USER}@${params.SERVER_ADDRESS}" \\
+    "sudo chmod 640 ${REMOTE_SECRETS_DIR}/role_id.txt ${REMOTE_SECRETS_DIR}/secret_id.txt"
+
 ${params.DEBUG ? 'echo "[DEBUG] Созданные файлы секретов:"' : ''}
-${params.DEBUG ? "ssh -i \"\${SSH_KEY}\" -o StrictHostKeyChecking=no -o LogLevel=ERROR -q \"\${SSH_USER}@${params.SERVER_ADDRESS}\" \"sudo -u ${env.USER_SYS} -g ${env.USER_SYS} ls -lh ${REMOTE_SECRETS_DIR}/\"" : ''}
+${params.DEBUG ? "ssh -i \"\${SSH_KEY}\" -o StrictHostKeyChecking=no -o LogLevel=ERROR -q \"\${SSH_USER}@${params.SERVER_ADDRESS}\" \"sudo -u ${env.KAE_STEND}-lnx-va-start ls -lh ${REMOTE_SECRETS_DIR}/\"" : ''}
 
 echo "[SUCCESS] Секреты успешно переданы и размещены в ${REMOTE_SECRETS_DIR}"
                         """
