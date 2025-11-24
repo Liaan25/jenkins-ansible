@@ -930,6 +930,10 @@ echo "[SUCCESS] Секреты успешно переданы и размеще
                             // Запуск Ansible playbook с поддержкой DEBUG режима
                             // Используем SSH_USER для подключения, так как у него есть ключ
                             sh """
+                            export ANSIBLE_CONFIG=\$(pwd)/ansible.cfg
+                            echo "[DEBUG] ANSIBLE_CONFIG=\$ANSIBLE_CONFIG"
+                            test -f "\$ANSIBLE_CONFIG" && echo "[DEBUG] ✓ ansible.cfg found" || echo "[DEBUG] ✗ ansible.cfg NOT found"
+                            
                             ansible-playbook \\
                                 -i inventories/dynamic_inventory \\
                                 playbooks/deploy_monitoring.yml \\
