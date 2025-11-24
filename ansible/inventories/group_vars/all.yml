@@ -16,18 +16,21 @@ monitoring_base_dir: "/opt/monitoring"
 # Формат имени: {{ kae_stend }}-lnx-mon_<тип>
 # Пример: CI10742292-lnx-mon_sys
 
-# KAE стенд (извлекается из NAMESPACE_CI в Jenkins, передаётся через inventory)
-# Дефолтное значение используется только если НЕ передано через inventory
-kae_stend: "KPRJ000000"
+# ==============================================================================
+# ВАЖНО: Переменные kae_stend, user_sys, user_ci, user_admin, user_ro
+# передаются через dynamic_inventory из Jenkins!
+# 
+# Приоритет переменных Ansible:
+# 1. --extra-vars (командная строка) - ВЫСШИЙ
+# 2. group_vars/all.yml - СРЕДНИЙ
+# 3. inventory [all:vars] - НИЗКИЙ
+#
+# Поэтому мы НЕ определяем здесь переменные, которые приходят из inventory,
+# чтобы не перезаписать их дефолтными значениями!
+# ==============================================================================
 
-# Базовые переменные пользователей (переопределяются из inventory)
-# Jenkins передаёт реальные значения через inventory [all:vars]
-user_sys: "{{ kae_stend }}-lnx-mon_sys"
-user_admin: "{{ kae_stend }}-lnx-mon_admin"
-user_ci: "{{ kae_stend }}-lnx-mon_ci"
-user_ro: "{{ kae_stend }}-lnx-mon_ro"
-
-# Динамические имена пользователей (используют user_* переменные из inventory)
+# Динамические имена пользователей (ссылаются на переменные из inventory)
+# Эти переменные приходят готовыми из Jenkins через dynamic_inventory
 monitoring_service_user: "{{ user_sys }}"
 monitoring_admin_user: "{{ user_admin }}"
 monitoring_ci_user: "{{ user_ci }}"
