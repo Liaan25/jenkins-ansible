@@ -600,3 +600,4 @@ cat $HOME/monitoring_sudoers_generated/.last_generated_path
 **Версия документа:** 1.0  
 **Дата создания:** November 19, 2024
 
+

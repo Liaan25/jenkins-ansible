@@ -118,3 +118,4 @@ Secondary Groups: CI10742292-lnx-mon_sys ← ВАЖНО!
 
 **Следующий шаг**: Создайте УЗ в IDM согласно `IDM_ACCOUNTS_GUIDE.md` и запустите Jenkins Pipeline! 🎉
 
+

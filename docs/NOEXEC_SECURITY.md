@@ -270,3 +270,4 @@ sudo -u monitoring_ro sudo systemctl --user status prometheus
 **Версия**: 1.0  
 **Статус**: ✅ Применено во всех sudoers файлах проекта
 
+

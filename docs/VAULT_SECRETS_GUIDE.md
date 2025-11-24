@@ -197,3 +197,4 @@ openssl x509 -in /dev/shm/monitoring_secrets/server.crt -noout -dates
 - `secret/data/monitoring/vault-agent` - AppRole credentials
 
 
+

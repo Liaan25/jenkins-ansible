@@ -755,21 +755,28 @@ echo "========================================================================"
 echo ""
 """ : ''}
 
-echo "[INFO] Создание директории для секретов в /dev/shm (через sudo -u SYS_USER)..."
+echo "[INFO] Создание директории для секретов в /dev/shm..."
+# Шаг 1: Создание директории от root
 ssh -i "\${SSH_KEY}" -o StrictHostKeyChecking=no "\${SSH_USER}@${params.SERVER_ADDRESS}" \\
-    "sudo -u ${env.USER_SYS} -g ${env.USER_SYS} mkdir -p ${REMOTE_SECRETS_DIR}"
+    "sudo mkdir -p ${REMOTE_SECRETS_DIR}"
+
+# Шаг 2: Установка владельца CI_USER:SYS_GROUP (для записи через SCP/pipe)
 ssh -i "\${SSH_KEY}" -o StrictHostKeyChecking=no "\${SSH_USER}@${params.SERVER_ADDRESS}" \\
-    "sudo -u ${env.USER_SYS} -g ${env.USER_SYS} chmod 770 ${REMOTE_SECRETS_DIR}"
+    "sudo chown ${env.USER_CI}:${env.USER_SYS} ${REMOTE_SECRETS_DIR}"
+
+# Шаг 3: Установка прав 770 (CI_USER может писать, SYS_GROUP может читать)
 ssh -i "\${SSH_KEY}" -o StrictHostKeyChecking=no "\${SSH_USER}@${params.SERVER_ADDRESS}" \\
-    "sudo -u ${env.USER_SYS} -g ${env.USER_SYS} chown ${env.USER_CI}:${env.USER_SYS} ${REMOTE_SECRETS_DIR}"
+    "sudo chmod 770 ${REMOTE_SECRETS_DIR}"
 
 ${params.DEBUG ? """
-echo "[DEBUG] После создания директории:"
+echo "[DEBUG] После создания директории (от root):"
 ssh -i "\${SSH_KEY}" -o StrictHostKeyChecking=no "\${SSH_USER}@${params.SERVER_ADDRESS}" << 'DEBUG_EOF2'
 echo "  - Права на директорию:"
-sudo -u ${env.USER_SYS} -g ${env.USER_SYS} ls -lad ${REMOTE_SECRETS_DIR}
+ls -lad ${REMOTE_SECRETS_DIR}
 echo "  - Владелец директории:"
-sudo -u ${env.USER_SYS} -g ${env.USER_SYS} stat -c "Owner: %U:%G (uid=%u gid=%g)" ${REMOTE_SECRETS_DIR}
+stat -c "Owner: %U:%G (uid=%u gid=%g)" ${REMOTE_SECRETS_DIR}
+echo "  - Проверка прав записи для CI_USER:"
+sudo -u ${env.USER_CI} touch ${REMOTE_SECRETS_DIR}/test_write && echo "  ✓ CI_USER может писать" && sudo -u ${env.USER_CI} rm ${REMOTE_SECRETS_DIR}/test_write || echo "  ✗ CI_USER НЕ может писать"
 DEBUG_EOF2
 echo ""
 """ : ''}
@@ -779,41 +786,56 @@ ${params.DEBUG ? "ls -lh ${WORKSPACE_LOCAL}/secrets.json" : ''}
 
 echo "[INFO] Передача секретов через SSH pipe (через sudo -u SYS_USER)..."
 ${params.DEBUG ? """
-echo "[DEBUG] Проверка sudo прав:"
+echo "[DEBUG] Проверка прав SSH_USER:"
 ssh -i "\${SSH_KEY}" -o StrictHostKeyChecking=no "\${SSH_USER}@${params.SERVER_ADDRESS}" << 'DEBUG_EOF3'
+echo "  - Текущий пользователь SSH:"
+whoami
+id
 echo "  - Проверка sudo -u SYS_USER:"
-sudo -u ${env.USER_SYS} -g ${env.USER_SYS} whoami 2>&1 || echo "  FAILED: sudo не работает"
-sudo -u ${env.USER_SYS} -g ${env.USER_SYS} id 2>&1 || echo "  FAILED: не удалось получить id"
+sudo -u ${env.USER_SYS} whoami 2>&1 || echo "  FAILED: sudo не работает"
+echo "  - Проверка sudo (root):"
+sudo whoami 2>&1 || echo "  FAILED: sudo (root) не работает"
 DEBUG_EOF3
 echo ""
 """ : ''}
 
 cat ${WORKSPACE_LOCAL}/secrets.json | ssh -i "\${SSH_KEY}" -o StrictHostKeyChecking=no "\${SSH_USER}@${params.SERVER_ADDRESS}" \\
-    "sudo -u ${env.USER_SYS} -g ${env.USER_SYS} bash -c 'cat > ${REMOTE_SECRETS_DIR}/secrets.json'"
+    "cat > ${REMOTE_SECRETS_DIR}/secrets.json"
 
-${params.DEBUG ? 'echo "[DEBUG] Удаленный файл secrets.json после копирования:"' : ''}
+${params.DEBUG ? 'echo "[DEBUG] Удаленный файл secrets.json после копирования (от CI_USER):"' : ''}
 ${params.DEBUG ? """
 ssh -i "\${SSH_KEY}" -o StrictHostKeyChecking=no "\${SSH_USER}@${params.SERVER_ADDRESS}" << 'DEBUG_EOF4'
 echo "  - Существование файла:"
-sudo -u ${env.USER_SYS} -g ${env.USER_SYS} ls -lh ${REMOTE_SECRETS_DIR}/secrets.json 2>&1 || echo "  Файл НЕ создан!"
+ls -lh ${REMOTE_SECRETS_DIR}/secrets.json 2>&1 || echo "  Файл НЕ создан!"
 echo "  - Размер файла:"
-sudo -u ${env.USER_SYS} -g ${env.USER_SYS} du -h ${REMOTE_SECRETS_DIR}/secrets.json 2>&1 || echo "  Не удалось проверить размер"
+du -h ${REMOTE_SECRETS_DIR}/secrets.json 2>&1 || echo "  Не удалось проверить размер"
 echo "  - Владелец файла:"
-sudo -u ${env.USER_SYS} -g ${env.USER_SYS} stat -c "Owner: %U:%G" ${REMOTE_SECRETS_DIR}/secrets.json 2>&1 || echo "  Не удалось проверить владельца"
+stat -c "Owner: %U:%G" ${REMOTE_SECRETS_DIR}/secrets.json 2>&1 || echo "  Не удалось проверить владельца"
 DEBUG_EOF4
 echo ""
 """ : ''}
 
-echo "[INFO] Установка финальных прав на директорию и файл секретов..."
+echo "[INFO] Установка финальных прав: передача владения SYS_USER и ограничение доступа..."
+# Шаг 1: Передать владение директории и всех файлов SYS_USER:SYS_GROUP
 ssh -i "\${SSH_KEY}" -o StrictHostKeyChecking=no "\${SSH_USER}@${params.SERVER_ADDRESS}" \\
-    "sudo -u ${env.USER_SYS} -g ${env.USER_SYS} chown -R ${env.USER_SYS}:${env.USER_SYS} ${REMOTE_SECRETS_DIR}"
-ssh -i "\${SSH_KEY}" -o StrictHostKeyChecking=no "\${SSH_USER}@${params.SERVER_ADDRESS}" \\
-    "sudo -u ${env.USER_SYS} -g ${env.USER_SYS} chmod 700 ${REMOTE_SECRETS_DIR}"
-ssh -i "\${SSH_KEY}" -o StrictHostKeyChecking=no "\${SSH_USER}@${params.SERVER_ADDRESS}" \\
-    "sudo -u ${env.USER_SYS} -g ${env.USER_SYS} chmod 600 ${REMOTE_SECRETS_DIR}/secrets.json"
+    "sudo chown -R ${env.USER_SYS}:${env.USER_SYS} ${REMOTE_SECRETS_DIR}"
 
-${params.DEBUG ? 'echo "[DEBUG] Права на secrets.json:"' : ''}
-${params.DEBUG ? "ssh -i \"\${SSH_KEY}\" -o StrictHostKeyChecking=no \"\${SSH_USER}@${params.SERVER_ADDRESS}\" \"sudo -u ${env.USER_SYS} -g ${env.USER_SYS} ls -lh ${REMOTE_SECRETS_DIR}/secrets.json\"" : ''}
+# Шаг 2: Установить финальные права (700 на директорию, 600 на файлы)
+ssh -i "\${SSH_KEY}" -o StrictHostKeyChecking=no "\${SSH_USER}@${params.SERVER_ADDRESS}" \\
+    "sudo chmod 700 ${REMOTE_SECRETS_DIR}"
+ssh -i "\${SSH_KEY}" -o StrictHostKeyChecking=no "\${SSH_USER}@${params.SERVER_ADDRESS}" \\
+    "sudo chmod 600 ${REMOTE_SECRETS_DIR}/secrets.json"
+
+${params.DEBUG ? 'echo "[DEBUG] Финальные права на secrets.json (теперь принадлежит SYS_USER):"' : ''}
+${params.DEBUG ? """
+ssh -i "\${SSH_KEY}" -o StrictHostKeyChecking=no "\${SSH_USER}@${params.SERVER_ADDRESS}" << 'DEBUG_EOF5'
+echo "  - Директория ${REMOTE_SECRETS_DIR}:"
+ls -lad ${REMOTE_SECRETS_DIR}
+echo "  - Файл secrets.json:"
+ls -lh ${REMOTE_SECRETS_DIR}/secrets.json
+DEBUG_EOF5
+echo ""
+""" : ''}
 
 echo "[INFO] Распаковка секретов в отдельные файлы (через sudo -u SYS_USER)..."
 ssh -i "\${SSH_KEY}" -o StrictHostKeyChecking=no "\${SSH_USER}@${params.SERVER_ADDRESS}" \\

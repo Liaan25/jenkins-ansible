@@ -78,3 +78,4 @@ Cmnd_Alias FIREWALL_WRAPPER = sha256:{{SHA256_FIREWALL}} /opt/monitoring/scripts
 # КОНЕЦ ФАЙЛА
 # ==============================================================================
 
+

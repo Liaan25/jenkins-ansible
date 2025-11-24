@@ -227,3 +227,4 @@ sudo rm /etc/sudoers.d/monitoring_system
 **Версия**: 1.0  
 **Статус**: ✅ Готово к использованию
 
+

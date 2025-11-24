@@ -336,3 +336,4 @@ echo "4. Set permissions: chmod 440, chown root:root"
 **Версия**: 1.0  
 **Статус**: ✅ Справочная информация
 
+
