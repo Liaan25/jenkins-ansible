@@ -113,8 +113,9 @@
       systemd:
         daemon_reload: yes
         scope: user
+      become_user: "{{ monitoring_service_user }}"
       environment:
-        XDG_RUNTIME_DIR: "/run/user/{{ ansible_user_uid }}"
+        XDG_RUNTIME_DIR: "/run/user/{{ lookup('pipe', 'id -u ' + monitoring_service_user) }}"
       tags: [systemd]
     
     - name: "Vault | Запуск Vault Agent"
@@ -123,8 +124,9 @@
         state: started
         enabled: yes
         scope: user
+      become_user: "{{ monitoring_service_user }}"
       environment:
-        XDG_RUNTIME_DIR: "/run/user/{{ ansible_user_uid }}"
+        XDG_RUNTIME_DIR: "/run/user/{{ lookup('pipe', 'id -u ' + monitoring_service_user) }}"
       when: vault_creds_check.results | selectattr('stat.exists', 'equalto', true) | list | length == 2
       tags: [service]
     
@@ -182,7 +184,7 @@
         scope: user
       become_user: "{{ monitoring_service_user }}"
       environment:
-        XDG_RUNTIME_DIR: "/run/user/{{ monitoring_service_user_uid }}"
+        XDG_RUNTIME_DIR: "/run/user/{{ lookup('pipe', 'id -u ' + monitoring_service_user) }}"
       tags: [systemd]
     
     - name: "Prometheus | Запуск сервиса"
@@ -193,7 +195,7 @@
         scope: user
       become_user: "{{ monitoring_service_user }}"
       environment:
-        XDG_RUNTIME_DIR: "/run/user/{{ monitoring_service_user_uid }}"
+        XDG_RUNTIME_DIR: "/run/user/{{ lookup('pipe', 'id -u ' + monitoring_service_user) }}"
       when: deployment.restart_services | default(true)
       tags: [service]
 
@@ -237,7 +239,7 @@
         daemon_reload: yes
       become_user: "{{ monitoring_service_user }}"
       environment:
-        XDG_RUNTIME_DIR: "/run/user/{{ monitoring_service_user_uid }}"
+        XDG_RUNTIME_DIR: "/run/user/{{ lookup('pipe', 'id -u ' + monitoring_service_user) }}"
       when: deployment.restart_services | default(true)
       tags: [service]
 
@@ -281,7 +283,7 @@
         daemon_reload: yes
       become_user: "{{ monitoring_service_user }}"
       environment:
-        XDG_RUNTIME_DIR: "/run/user/{{ monitoring_service_user_uid }}"
+        XDG_RUNTIME_DIR: "/run/user/{{ lookup('pipe', 'id -u ' + monitoring_service_user) }}"
       when: deployment.restart_services | default(true)
       tags: [service]
 
@@ -318,7 +320,7 @@
         - harvest
       become_user: "{{ monitoring_service_user }}"
       environment:
-        XDG_RUNTIME_DIR: "/run/user/{{ monitoring_service_user_uid }}"
+        XDG_RUNTIME_DIR: "/run/user/{{ lookup('pipe', 'id -u ' + monitoring_service_user) }}"
       register: service_status
       changed_when: false
       failed_when: false
