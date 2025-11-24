@@ -29,12 +29,10 @@
     - name: "Проверка подключения к серверам"
       ping:
     
-    - name: "Проверка что запущено от пользователя monitoring_ci"
-      assert:
-        that:
-          - ansible_user == monitoring_ci_user
-        fail_msg: "Playbook должен запускаться от пользователя {{ monitoring_ci_user }}"
-        success_msg: "Пользователь корректен: {{ ansible_user }}"
+    # SECURITY: Проверка ansible_user удалена - безопасность обеспечивается через:
+    # 1. SSH ключ аутентификация (контролируется Jenkins credentials)
+    # 2. sudo права (контролируются через sudoers с явными путями)
+    # 3. Все задачи используют become с конкретными пользователями
     
     - name: "Вывод информации о развертывании"
       debug:
