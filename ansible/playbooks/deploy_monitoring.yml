@@ -525,17 +525,36 @@
         XDG_RUNTIME_DIR: "/run/user/{{ monitoring_service_user_uid }}"
       tags: [systemd]
     
-    - name: "Prometheus | Запуск сервиса"
+    - name: "Prometheus | Проверка текущего статуса сервиса"
+      systemd:
+        name: prometheus
+        scope: user
+      register: prometheus_status
+      failed_when: false
+      become_user: "{{ monitoring_service_user }}"
+      environment:
+        XDG_RUNTIME_DIR: "/run/user/{{ monitoring_service_user_uid }}"
+      tags: [systemd, service]
+    
+    - name: "Prometheus | Информация о статусе"
+      debug:
+        msg: "Prometheus service: {{ prometheus_status.status.ActiveState | default('unknown') }}"
+      tags: [systemd, service]
+    
+    - name: "Prometheus | Запуск сервиса (если не запущен)"
       systemd:
         name: prometheus
         state: started
         enabled: yes
+        daemon_reload: yes
         scope: user
+      when: 
+        - deployment.restart_services | default(true)
+        - prometheus_status.status.ActiveState is not defined or prometheus_status.status.ActiveState != 'active'
       become_user: "{{ monitoring_service_user }}"
       environment:
         XDG_RUNTIME_DIR: "/run/user/{{ monitoring_service_user_uid }}"
-      when: deployment.restart_services | default(true)
-      tags: [service]
+      tags: [systemd, service]
 
 # ==============================================================================
 # ЭТАП 4: Установка и настройка Grafana
@@ -568,18 +587,36 @@
       become_user: "{{ monitoring_service_user }}"
       tags: [systemd]
     
-    - name: "Grafana | Запуск сервиса"
+    - name: "Grafana | Проверка текущего статуса сервиса"
+      systemd:
+        name: grafana
+        scope: user
+      register: grafana_status
+      failed_when: false
+      become_user: "{{ monitoring_service_user }}"
+      environment:
+        XDG_RUNTIME_DIR: "/run/user/{{ monitoring_service_user_uid }}"
+      tags: [systemd, service]
+    
+    - name: "Grafana | Информация о статусе"
+      debug:
+        msg: "Grafana service: {{ grafana_status.status.ActiveState | default('unknown') }}"
+      tags: [systemd, service]
+    
+    - name: "Grafana | Запуск сервиса (если не запущен)"
       systemd:
         name: grafana
         state: started
         enabled: yes
-        scope: user
         daemon_reload: yes
+        scope: user
+      when:
+        - deployment.restart_services | default(true)
+        - grafana_status.status.ActiveState is not defined or grafana_status.status.ActiveState != 'active'
       become_user: "{{ monitoring_service_user }}"
       environment:
         XDG_RUNTIME_DIR: "/run/user/{{ monitoring_service_user_uid }}"
-      when: deployment.restart_services | default(true)
-      tags: [service]
+      tags: [systemd, service]
 
 # ==============================================================================
 # ЭТАП 5: Установка и настройка Harvest
@@ -612,18 +649,36 @@
       become_user: "{{ monitoring_service_user }}"
       tags: [systemd]
     
-    - name: "Harvest | Запуск сервиса"
+    - name: "Harvest | Проверка текущего статуса сервиса"
+      systemd:
+        name: harvest
+        scope: user
+      register: harvest_status
+      failed_when: false
+      become_user: "{{ monitoring_service_user }}"
+      environment:
+        XDG_RUNTIME_DIR: "/run/user/{{ monitoring_service_user_uid }}"
+      tags: [systemd, service]
+    
+    - name: "Harvest | Информация о статусе"
+      debug:
+        msg: "Harvest service: {{ harvest_status.status.ActiveState | default('unknown') }}"
+      tags: [systemd, service]
+    
+    - name: "Harvest | Запуск сервиса (если не запущен)"
       systemd:
         name: harvest
         state: started
         enabled: yes
-        scope: user
         daemon_reload: yes
+        scope: user
+      when:
+        - deployment.restart_services | default(true)
+        - harvest_status.status.ActiveState is not defined or harvest_status.status.ActiveState != 'active'
       become_user: "{{ monitoring_service_user }}"
       environment:
         XDG_RUNTIME_DIR: "/run/user/{{ monitoring_service_user_uid }}"
-      when: deployment.restart_services | default(true)
-      tags: [service]
+      tags: [systemd, service]
 
 # ==============================================================================
 # ЭТАП 6: Проверка безопасности и верификация
