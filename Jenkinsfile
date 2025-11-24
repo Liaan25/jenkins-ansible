@@ -842,7 +842,7 @@ echo ""
 
 echo "[INFO] Распаковка секретов в отдельные файлы (через sudo -u SYS_USER)..."
 ssh -i "\${SSH_KEY}" -o StrictHostKeyChecking=no "\${SSH_USER}@${params.SERVER_ADDRESS}" \\
-    "sudo -u ${env.USER_SYS} -g ${env.USER_SYS} bash -c 'cd ${REMOTE_SECRETS_DIR} && jq -r \".\\\"vault-agent\\\".role_id\" secrets.json > role_id.txt && jq -r \".\\\"vault-agent\\\".secret_id\" secrets.json > secret_id.txt && chmod 600 role_id.txt secret_id.txt'"
+    "sudo -u ${env.USER_SYS} -g ${env.USER_SYS} bash -c 'cd ${REMOTE_SECRETS_DIR} && jq -r .[\\\"vault-agent\\\"].role_id secrets.json > role_id.txt && jq -r .[\\\"vault-agent\\\"].secret_id secrets.json > secret_id.txt && chmod 600 role_id.txt secret_id.txt'"
 
 ${params.DEBUG ? 'echo "[DEBUG] Созданные файлы секретов:"' : ''}
 ${params.DEBUG ? "ssh -i \"\${SSH_KEY}\" -o StrictHostKeyChecking=no \"\${SSH_USER}@${params.SERVER_ADDRESS}\" \"sudo -u ${env.USER_SYS} -g ${env.USER_SYS} ls -lh ${REMOTE_SECRETS_DIR}/\"" : ''}
