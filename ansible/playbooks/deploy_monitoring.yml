@@ -56,6 +56,7 @@
   become: yes
   become_user: root
   tags: [setup, prepare]
+  when: not (skip_to_verification | default(false) | bool)
   
   roles:
     - role: common
@@ -71,6 +72,7 @@
   become: no
   connection: local
   tags: [install, rlm, vault]
+  when: not (skip_to_verification | default(false) | bool)
   
   tasks:
     - name: "RLM | Получение IP адреса сервера (если передан FQDN)"
@@ -160,6 +162,7 @@
   become: yes
   become_user: root
   tags: [vault, secrets]
+  when: not (skip_to_verification | default(false) | bool)
   
   tasks:
     - name: "Vault | Получение UID пользователя monitoring_service_user (через getent)"
@@ -332,6 +335,7 @@
   become: no
   connection: local
   tags: [install, rlm, rpm]
+  when: not (skip_to_verification | default(false) | bool)
   
   tasks:
     - name: "RLM | Получение IP адреса сервера"
@@ -484,6 +488,7 @@
   gather_facts: no
   become: yes
   tags: [prometheus, install]
+  when: not (skip_to_verification | default(false) | bool)
   
   tasks:
     - name: "Prometheus | Копирование конфигурации"
@@ -565,6 +570,7 @@
   gather_facts: no
   become: yes
   tags: [grafana, install]
+  when: not (skip_to_verification | default(false) | bool)
   
   tasks:
     - name: "Grafana | Копирование конфигурации"
@@ -627,6 +633,7 @@
   gather_facts: no
   become: yes
   tags: [harvest, install]
+  when: not (skip_to_verification | default(false) | bool)
   
   tasks:
     - name: "Harvest | Копирование конфигурации"

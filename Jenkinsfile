@@ -151,6 +151,11 @@ pipeline {
             defaultValue: false,
             description: 'Пропустить установку Vault Agent через RLM (если уже установлен вручную)'
         )
+        booleanParam(
+            name: 'SKIP_TO_VERIFICATION',
+            defaultValue: false,
+            description: 'Пропустить все этапы и начать с ЭТАП 6 (Проверка безопасности и верификация)'
+        )
     }
     
     environment {
@@ -946,6 +951,7 @@ echo "[INFO] Владелец: ${env.KAE_STEND}-lnx-va-start (Vault Agent мож
                                 --extra-vars "sberca_cert_kv=${params.SBERCA_CERT_KV}" \\
                                 --extra-vars "admin_email=${params.ADMIN_EMAIL}" \\
                                 --extra-vars "skip_rlm_vault_agent=${params.SKIP_RLM_VAULT_AGENT}" \\
+                                --extra-vars "skip_to_verification=${params.SKIP_TO_VERIFICATION}" \\
                                 --extra-vars "ansible_user=\${SSH_USER}" \\
                                 --private-key=\${SSH_KEY} \\
                                 ${params.DEBUG ? '-vvv' : '-v'}
