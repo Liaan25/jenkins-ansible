@@ -196,7 +196,39 @@
         - "/opt/vault/conf"
         - "/opt/vault/log"
         - "/opt/vault/certs"
+      become: yes
+      become_user: root
       tags: [setup]
+    
+    - name: "Vault | Копирование role_id.txt и secret_id.txt из /dev/shm/ в /opt/vault/conf/"
+      copy:
+        src: "/dev/shm/monitoring_secrets/{{ item }}"
+        dest: "/opt/vault/conf/{{ item }}"
+        owner: "{{ vault_agent_user }}"
+        group: "{{ vault_agent_group }}"
+        mode: "0640"
+        remote_src: yes
+      loop:
+        - role_id.txt
+        - secret_id.txt
+      become: yes
+      become_user: root
+      tags: [setup, vault]
+    
+    - name: "Vault | Проверка скопированных файлов в /opt/vault/conf/"
+      stat:
+        path: "/opt/vault/conf/{{ item }}"
+      loop:
+        - role_id.txt
+        - secret_id.txt
+      register: vault_conf_files_check
+      tags: [check, vault]
+    
+    - name: "Vault | Информация о скопированных файлах"
+      debug:
+        msg: "{{ item.item }}: {{ 'EXISTS' if item.stat.exists else 'MISSING' }} ({{ item.stat.size | default(0) }} bytes)"
+      loop: "{{ vault_conf_files_check.results }}"
+      tags: [check, vault]
     
     - name: "Vault | Создание agent.hcl с templates (как в deploy_monitoring.sh)"
       template:

@@ -845,26 +845,14 @@ echo "[INFO] Распаковка секретов в отдельные фай�
 ssh -i "\${SSH_KEY}" -o StrictHostKeyChecking=no -o LogLevel=ERROR -q "\${SSH_USER}@${params.SERVER_ADDRESS}" \\
     "sudo -u ${env.USER_SYS} -g ${env.USER_SYS} /opt/monitoring/scripts/wrappers/extract_vault_secrets.sh"
 
-echo "[INFO] Копирование role_id.txt и secret_id.txt в /opt/vault/conf/ для Vault Agent..."
-# ВАЖНО: usermod/userdel только через IDM, поэтому копируем файлы в /opt/vault/conf/
-# где Vault Agent имеет доступ через vault_agent_group
-ssh -i "\${SSH_KEY}" -o StrictHostKeyChecking=no -o LogLevel=ERROR -q "\${SSH_USER}@${params.SERVER_ADDRESS}" \\
-    "sudo cp ${REMOTE_SECRETS_DIR}/role_id.txt /opt/vault/conf/role_id.txt && \\
-     sudo cp ${REMOTE_SECRETS_DIR}/secret_id.txt /opt/vault/conf/secret_id.txt"
+# NOTE: Копирование role_id.txt и secret_id.txt в /opt/vault/conf/ теперь выполняется
+#       в Ansible playbook ЭТАП 2 (более надежно, с проверками результата)
 
-echo "[INFO] Установка прав на скопированные файлы для Vault Agent..."
-ssh -i "\${SSH_KEY}" -o StrictHostKeyChecking=no -o LogLevel=ERROR -q "\${SSH_USER}@${params.SERVER_ADDRESS}" \\
-    "sudo chown ${env.KAE_STEND}-lnx-va-start:${env.KAE_STEND}-lnx-va-read /opt/vault/conf/role_id.txt /opt/vault/conf/secret_id.txt"
-ssh -i "\${SSH_KEY}" -o StrictHostKeyChecking=no -o LogLevel=ERROR -q "\${SSH_USER}@${params.SERVER_ADDRESS}" \\
-    "sudo chmod 640 /opt/vault/conf/role_id.txt /opt/vault/conf/secret_id.txt"
-
-${params.DEBUG ? 'echo "[DEBUG] Созданные файлы секретов:"' : ''}
+${params.DEBUG ? 'echo "[DEBUG] Созданные файлы секретов в /dev/shm/monitoring_secrets/:"' : ''}
 ${params.DEBUG ? """
 ssh -i "\${SSH_KEY}" -o StrictHostKeyChecking=no -o LogLevel=ERROR -q "\${SSH_USER}@${params.SERVER_ADDRESS}" << 'DEBUG_EOF6'
-echo "  - В /dev/shm/monitoring_secrets/ (для SYS_USER):"
+echo "  - Файлы для wrapper скрипта (SYS_USER):"
 sudo -u ${env.USER_SYS} ls -lh ${REMOTE_SECRETS_DIR}/
-echo "  - В /opt/vault/conf/ (для Vault Agent):"
-sudo -u ${env.KAE_STEND}-lnx-va-start ls -lh /opt/vault/conf/role_id.txt /opt/vault/conf/secret_id.txt
 DEBUG_EOF6
 """ : ''}
 
