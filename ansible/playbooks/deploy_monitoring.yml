@@ -62,46 +62,33 @@
       tags: [common]
 
 # ==============================================================================
-# ЭТАП 1.5: Установка ПО через RLM API
+# ЭТАП 1.5: Установка Vault Agent через RLM
 # ==============================================================================
 
-- name: "ЭТАП 1.5: Установка ПО через RLM API"
+- name: "ЭТАП 1.5: Установка Vault Agent через RLM"
   hosts: all
   gather_facts: yes
   become: no
-  tags: [install, rlm]
+  connection: local
+  tags: [install, rlm, vault]
   
   tasks:
     - name: "RLM | Получение IP адреса сервера (если передан FQDN)"
       set_fact:
         server_ip_address: "{{ ansible_default_ipv4.address }}"
-      tags: [vault, rpm]
+      tags: [vault]
     
-    - name: "RLM | Чтение секретов из secrets_vault_agent.json (созданного Vault Agent)"
-      slurp:
-        src: "/dev/shm/monitoring_secrets/secrets_vault_agent.json"
-      register: secrets_content
-      become: yes
-      become_user: "{{ monitoring_service_user }}"
-      tags: [vault, rpm]
-    
-    - name: "RLM | Парсинг секретов из JSON"
-      set_fact:
-        secrets_data: "{{ secrets_content.content | b64decode | from_json }}"
-      tags: [vault, rpm]
-    
-    - name: "RLM | Информация о сервере и секретах для RLM"
+    - name: "RLM | Информация о сервере для RLM Vault Agent"
       debug:
         msg: |
-          RLM параметры:
+          RLM Vault Agent параметры:
             - IP: {{ server_ip_address }}
             - SEC_MAN_ADDR: {{ sec_man_addr | upper }}
             - Namespace: {{ vault_namespace }}
-            - Prometheus RPM: {{ secrets_data.rpm_url.prometheus | default('NOT SET') }}
-            - Grafana RPM: {{ secrets_data.rpm_url.grafana | default('NOT SET') }}
-            - Harvest RPM: {{ secrets_data.rpm_url.harvest | default('NOT SET') }}
-            - Skip Vault Agent: {{ skip_rlm_vault_agent | default(false) }}
-      tags: [vault, rpm]
+            - Vault Agent User: {{ vault_agent_user }}
+            - Vault Agent Group: {{ vault_agent_group }}
+            - Skip: {{ skip_rlm_vault_agent | default(false) }}
+      tags: [vault]
     
     - name: "RLM | ПРОПУСК установки Vault Agent (параметр SKIP_RLM_VAULT_AGENT=true)"
       debug:
@@ -162,122 +149,9 @@
       failed_when: vault_status.json.status in ['failed', 'error']
       when: not (skip_rlm_vault_agent | default(false) | bool)
       tags: [vault]
-    
-    # =========================================================================
-    # УСТАНОВКА RPM ПАКЕТОВ ПОСЛЕДОВАТЕЛЬНО (НЕ ПАРАЛЛЕЛЬНО!)
-    # RLM не может обрабатывать несколько задач на одном сервере одновременно
-    # =========================================================================
-    
-    - name: "RLM | Установка Prometheus"
-      uri:
-        url: "{{ rlm_api_url }}/api/tasks.json"
-        method: POST
-        headers:
-          Authorization: "Token {{ rlm_token }}"
-          Content-Type: "application/json"
-        body_format: json
-        body:
-          params:
-            url: "{{ secrets_data.rpm_url.prometheus }}"
-            reinstall_is_allowed: true
-          start_at: "now"
-          service: "LINUX_RPM_INSTALLER"
-          items:
-            - table_id: "linuxrpminstallertable"
-              invsvm_ip: "{{ server_ip_address }}"
-        status_code: [200, 201]
-        validate_certs: no
-      register: prometheus_install_task
-      tags: [rpm, prometheus]
-    
-    - name: "RLM | Мониторинг установки Prometheus"
-      uri:
-        url: "{{ rlm_api_url }}/api/tasks/{{ prometheus_install_task.json.id }}/"
-        method: GET
-        headers:
-          Authorization: "Token {{ rlm_token }}"
-        validate_certs: no
-      register: prometheus_status
-      until: prometheus_status.json.status in ['success', 'failed', 'error']
-      retries: 120
-      delay: 10
-      failed_when: prometheus_status.json.status in ['failed', 'error']
-      tags: [rpm, prometheus]
-    
-    - name: "RLM | Установка Grafana"
-      uri:
-        url: "{{ rlm_api_url }}/api/tasks.json"
-        method: POST
-        headers:
-          Authorization: "Token {{ rlm_token }}"
-          Content-Type: "application/json"
-        body_format: json
-        body:
-          params:
-            url: "{{ secrets_data.rpm_url.grafana }}"
-            reinstall_is_allowed: true
-          start_at: "now"
-          service: "LINUX_RPM_INSTALLER"
-          items:
-            - table_id: "linuxrpminstallertable"
-              invsvm_ip: "{{ server_ip_address }}"
-        status_code: [200, 201]
-        validate_certs: no
-      register: grafana_install_task
-      tags: [rpm, grafana]
-    
-    - name: "RLM | Мониторинг установки Grafana"
-      uri:
-        url: "{{ rlm_api_url }}/api/tasks/{{ grafana_install_task.json.id }}/"
-        method: GET
-        headers:
-          Authorization: "Token {{ rlm_token }}"
-        validate_certs: no
-      register: grafana_status
-      until: grafana_status.json.status in ['success', 'failed', 'error']
-      retries: 120
-      delay: 10
-      failed_when: grafana_status.json.status in ['failed', 'error']
-      tags: [rpm, grafana]
-    
-    - name: "RLM | Установка Harvest"
-      uri:
-        url: "{{ rlm_api_url }}/api/tasks.json"
-        method: POST
-        headers:
-          Authorization: "Token {{ rlm_token }}"
-          Content-Type: "application/json"
-        body_format: json
-        body:
-          params:
-            url: "{{ secrets_data.rpm_url.harvest }}"
-            reinstall_is_allowed: true
-          start_at: "now"
-          service: "LINUX_RPM_INSTALLER"
-          items:
-            - table_id: "linuxrpminstallertable"
-              invsvm_ip: "{{ server_ip_address }}"
-        status_code: [200, 201]
-        validate_certs: no
-      register: harvest_install_task
-      tags: [rpm, harvest]
-    
-    - name: "RLM | Мониторинг установки Harvest"
-      uri:
-        url: "{{ rlm_api_url }}/api/tasks/{{ harvest_install_task.json.id }}/"
-        method: GET
-        headers:
-          Authorization: "Token {{ rlm_token }}"
-        validate_certs: no
-      register: harvest_status
-      until: harvest_status.json.status in ['success', 'failed', 'error']
-      retries: 120
-      delay: 10
-      failed_when: harvest_status.json.status in ['failed', 'error']
-      tags: [rpm, harvest]
 
 # ==============================================================================
-# ЭТАП 2: Проверка Vault Agent и получение секретов
+# ЭТАП 2: Настройка Vault Agent и генерация secrets_vault_agent.json
 # ==============================================================================
 
 - name: "ЭТАП 2: Настройка Vault Agent и получение секретов"
@@ -415,6 +289,159 @@
         msg: "{{ item.item }}: {{ 'EXISTS' if item.stat.exists else 'MISSING' }} (owner: {{ item.stat.pw_name | default('unknown') }}:{{ item.stat.gr_name | default('unknown') }})"
       loop: "{{ monitoring_certs_check.results }}"
       tags: [check, certs]
+
+# ==============================================================================
+# ЭТАП 2.5: Установка RPM пакетов через RLM (использует secrets_vault_agent.json)
+# ==============================================================================
+
+- name: "ЭТАП 2.5: Установка RPM пакетов через RLM"
+  hosts: all
+  gather_facts: no
+  become: no
+  connection: local
+  tags: [install, rlm, rpm]
+  
+  tasks:
+    - name: "RLM | Получение IP адреса сервера"
+      set_fact:
+        server_ip_address: "{{ hostvars[inventory_hostname]['ansible_default_ipv4']['address'] }}"
+      tags: [rpm]
+    
+    - name: "RLM | Чтение секретов из secrets_vault_agent.json (созданного Vault Agent)"
+      slurp:
+        src: "/dev/shm/monitoring_secrets/secrets_vault_agent.json"
+      register: secrets_content
+      become: yes
+      become_user: "{{ monitoring_service_user }}"
+      delegate_to: "{{ inventory_hostname }}"
+      tags: [rpm]
+    
+    - name: "RLM | Парсинг секретов из JSON"
+      set_fact:
+        secrets_data: "{{ secrets_content.content | b64decode | from_json }}"
+      tags: [rpm]
+    
+    - name: "RLM | Информация о RPM URLs для установки"
+      debug:
+        msg: |
+          RPM пакеты для установки:
+            - Prometheus: {{ secrets_data.rpm_url.prometheus | default('NOT SET') }}
+            - Grafana: {{ secrets_data.rpm_url.grafana | default('NOT SET') }}
+            - Harvest: {{ secrets_data.rpm_url.harvest | default('NOT SET') }}
+      tags: [rpm]
+    
+    # =========================================================================
+    # УСТАНОВКА RPM ПАКЕТОВ ПОСЛЕДОВАТЕЛЬНО (НЕ ПАРАЛЛЕЛЬНО!)
+    # RLM не может обрабатывать несколько задач на одном сервере одновременно
+    # =========================================================================
+    
+    - name: "RLM | Установка Prometheus"
+      uri:
+        url: "{{ rlm_api_url }}/api/tasks.json"
+        method: POST
+        headers:
+          Authorization: "Token {{ rlm_token }}"
+          Content-Type: "application/json"
+        body_format: json
+        body:
+          params:
+            url: "{{ secrets_data.rpm_url.prometheus }}"
+            reinstall_is_allowed: true
+          start_at: "now"
+          service: "LINUX_RPM_INSTALLER"
+          items:
+            - table_id: "linuxrpminstallertable"
+              invsvm_ip: "{{ server_ip_address }}"
+        status_code: [200, 201]
+        validate_certs: no
+      register: prometheus_install_task
+      tags: [rpm, prometheus]
+    
+    - name: "RLM | Мониторинг установки Prometheus"
+      uri:
+        url: "{{ rlm_api_url }}/api/tasks/{{ prometheus_install_task.json.id }}/"
+        method: GET
+        headers:
+          Authorization: "Token {{ rlm_token }}"
+        validate_certs: no
+      register: prometheus_status
+      until: prometheus_status.json.status in ['success', 'failed', 'error']
+      retries: 120
+      delay: 10
+      failed_when: prometheus_status.json.status in ['failed', 'error']
+      tags: [rpm, prometheus]
+    
+    - name: "RLM | Установка Grafana"
+      uri:
+        url: "{{ rlm_api_url }}/api/tasks.json"
+        method: POST
+        headers:
+          Authorization: "Token {{ rlm_token }}"
+          Content-Type: "application/json"
+        body_format: json
+        body:
+          params:
+            url: "{{ secrets_data.rpm_url.grafana }}"
+            reinstall_is_allowed: true
+          start_at: "now"
+          service: "LINUX_RPM_INSTALLER"
+          items:
+            - table_id: "linuxrpminstallertable"
+              invsvm_ip: "{{ server_ip_address }}"
+        status_code: [200, 201]
+        validate_certs: no
+      register: grafana_install_task
+      tags: [rpm, grafana]
+    
+    - name: "RLM | Мониторинг установки Grafana"
+      uri:
+        url: "{{ rlm_api_url }}/api/tasks/{{ grafana_install_task.json.id }}/"
+        method: GET
+        headers:
+          Authorization: "Token {{ rlm_token }}"
+        validate_certs: no
+      register: grafana_status
+      until: grafana_status.json.status in ['success', 'failed', 'error']
+      retries: 120
+      delay: 10
+      failed_when: grafana_status.json.status in ['failed', 'error']
+      tags: [rpm, grafana]
+    
+    - name: "RLM | Установка Harvest"
+      uri:
+        url: "{{ rlm_api_url }}/api/tasks.json"
+        method: POST
+        headers:
+          Authorization: "Token {{ rlm_token }}"
+          Content-Type: "application/json"
+        body_format: json
+        body:
+          params:
+            url: "{{ secrets_data.rpm_url.harvest }}"
+            reinstall_is_allowed: true
+          start_at: "now"
+          service: "LINUX_RPM_INSTALLER"
+          items:
+            - table_id: "linuxrpminstallertable"
+              invsvm_ip: "{{ server_ip_address }}"
+        status_code: [200, 201]
+        validate_certs: no
+      register: harvest_install_task
+      tags: [rpm, harvest]
+    
+    - name: "RLM | Мониторинг установки Harvest"
+      uri:
+        url: "{{ rlm_api_url }}/api/tasks/{{ harvest_install_task.json.id }}/"
+        method: GET
+        headers:
+          Authorization: "Token {{ rlm_token }}"
+        validate_certs: no
+      register: harvest_status
+      until: harvest_status.json.status in ['success', 'failed', 'error']
+      retries: 120
+      delay: 10
+      failed_when: harvest_status.json.status in ['failed', 'error']
+      tags: [rpm, harvest]
 
 # ==============================================================================
 # ЭТАП 3: Установка и настройка Prometheus
