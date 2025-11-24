@@ -848,15 +848,32 @@ ssh -i "\${SSH_KEY}" -o StrictHostKeyChecking=no -o LogLevel=ERROR -q "\${SSH_US
 # NOTE: Копирование role_id.txt и secret_id.txt в /opt/vault/conf/ теперь выполняется
 #       в Ansible playbook ЭТАП 2 (более надежно, с проверками результата)
 
-${params.DEBUG ? 'echo "[DEBUG] Созданные файлы секретов в /dev/shm/monitoring_secrets/:"' : ''}
+echo "[INFO] Передача владения директории Vault Agent для записи secrets_vault_agent.json..."
+# ВАЖНО: Vault Agent должен писать secrets_vault_agent.json в /dev/shm/monitoring_secrets/
+# Передаем владение директории vault_agent_user ПОСЛЕ того как wrapper создал файлы
+ssh -i "\${SSH_KEY}" -o StrictHostKeyChecking=no -o LogLevel=ERROR -q "\${SSH_USER}@${params.SERVER_ADDRESS}" \\
+    "sudo chown -R ${env.KAE_STEND}-lnx-va-start:${env.KAE_STEND}-lnx-va-read ${REMOTE_SECRETS_DIR}"
+
+echo "[INFO] Установка прав доступа для Vault Agent..."
+# Директория: 750 (vault_agent_user: rwx, vault_agent_group: r-x, other: ---)
+ssh -i "\${SSH_KEY}" -o StrictHostKeyChecking=no -o LogLevel=ERROR -q "\${SSH_USER}@${params.SERVER_ADDRESS}" \\
+    "sudo chmod 750 ${REMOTE_SECRETS_DIR}"
+# Файлы: 640 (vault_agent_user: rw-, vault_agent_group: r--, other: ---)
+ssh -i "\${SSH_KEY}" -o StrictHostKeyChecking=no -o LogLevel=ERROR -q "\${SSH_USER}@${params.SERVER_ADDRESS}" \\
+    "sudo chmod 640 ${REMOTE_SECRETS_DIR}/*"
+
+${params.DEBUG ? 'echo "[DEBUG] Финальные права на /dev/shm/monitoring_secrets/ (для Vault Agent):"' : ''}
 ${params.DEBUG ? """
 ssh -i "\${SSH_KEY}" -o StrictHostKeyChecking=no -o LogLevel=ERROR -q "\${SSH_USER}@${params.SERVER_ADDRESS}" << 'DEBUG_EOF6'
-echo "  - Файлы для wrapper скрипта (SYS_USER):"
-sudo -u ${env.USER_SYS} ls -lh ${REMOTE_SECRETS_DIR}/
+echo "  - Директория:"
+sudo ls -lad ${REMOTE_SECRETS_DIR}
+echo "  - Файлы:"
+sudo ls -lh ${REMOTE_SECRETS_DIR}/
 DEBUG_EOF6
 """ : ''}
 
 echo "[SUCCESS] Секреты успешно переданы и размещены в ${REMOTE_SECRETS_DIR}"
+echo "[INFO] Владелец: ${env.KAE_STEND}-lnx-va-start (Vault Agent может писать secrets_vault_agent.json)"
                         """
                         
                         sh 'chmod +x transfer_secrets.sh'
