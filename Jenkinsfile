@@ -938,7 +938,7 @@ echo "[SUCCESS] Секреты успешно переданы и размеще
                                 -i inventories/dynamic_inventory \\
                                 playbooks/deploy_monitoring.yml \\
                                 --extra-vars "rlm_token=${RLM_TOKEN}" \\
-                                --extra-vars "rlm_api_url=https://rlm.delta.sbrf.ru" \\
+                                --extra-vars "rlm_api_url=${params.RLM_API_URL}" \\
                                 --extra-vars "sec_man_addr=${params.SEC_MAN_ADDR}" \\
                                 --extra-vars "vault_namespace=${env.NAMESPACE_CI}" \\
                                 --extra-vars "ansible_user=\${SSH_USER}" \\

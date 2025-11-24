@@ -54,7 +54,10 @@ vault_agent_group: "{{ kae_stend }}-lnx-va-read"
 # ==============================================================================
 # RLM (Resource Lifecycle Management) - корпоративный инструмент
 # для автоматизированной установки ПО через заявки
-rlm_api_url: "https://rlm.delta.sbrf.ru"
+# 
+# ВАЖНО: rlm_api_url передается через extra-vars из Jenkins (params.RLM_API_URL)
+# Дефолтные значения только для справки
+rlm_api_url: "https://rlm.sigma.sbrf.ru"  # Дефолт из Jenkins
 
 # URL для скачивания RPM пакетов через RLM
 prometheus_rpm_url: "http://artifactory.sigma.sbrf.ru/artifactory/maven-public/prometheus/prometheus-latest.rpm"
@@ -65,9 +68,10 @@ harvest_rpm_url: "http://artifactory.sigma.sbrf.ru/artifactory/maven-public/harv
 # VAULT / SECMAN ПАРАМЕТРЫ
 # ==============================================================================
 
-# Адрес Vault (SecMan)
-vault_addr: "https://vault.sigma.sbrf.ru"
-vault_namespace: "KPRJ_000000"  # ИЗМЕНИТЬ на ваш namespace
+# ВАЖНО: sec_man_addr передается через extra-vars из Jenkins (params.SEC_MAN_ADDR)
+# vault_namespace передается через extra-vars из Jenkins (env.NAMESPACE_CI)
+sec_man_addr: "vault.sigma.sbrf.ru"  # Дефолт из Jenkins
+vault_namespace: "KPRJ_000000"  # Дефолт, реальное значение из Jenkins
 
 # Пути к KV секретам в Vault (изменить на свои)
 vault_kv_paths:
