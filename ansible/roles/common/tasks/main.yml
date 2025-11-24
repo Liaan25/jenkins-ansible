@@ -56,7 +56,7 @@
     mode: "{{ item.mode }}"
   loop:
     - { path: "{{ monitoring_dirs.data }}", owner: "{{ monitoring_service_user }}", group: "{{ monitoring_group }}", mode: "{{ directory_permissions.data }}" }
-    - { path: "{{ monitoring_dirs.logs }}", owner: "{{ monitoring_service_user }}", group: "monitoring_admin", mode: "{{ directory_permissions.logs }}" }
+    - { path: "{{ monitoring_dirs.logs }}", owner: "{{ monitoring_service_user }}", group: "{{ monitoring_group }}", mode: "{{ directory_permissions.logs }}" }
   become: yes
   become_user: root
   tags: [setup, directories]
@@ -66,7 +66,7 @@
     path: "{{ monitoring_dirs.logs }}/{{ item }}"
     state: directory
     owner: "{{ monitoring_service_user }}"
-    group: "monitoring_admin"
+    group: "{{ monitoring_group }}"
     mode: "{{ directory_permissions.logs }}"
   loop:
     - prometheus
