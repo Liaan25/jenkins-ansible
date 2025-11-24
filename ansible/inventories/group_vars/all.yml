@@ -42,6 +42,26 @@ monitoring_ro_user: "{{ user_ro }}"
 monitoring_group: "{{ user_sys }}"
 
 # ==============================================================================
+# VAULT AGENT ПОЛЬЗОВАТЕЛИ (создаются RLM сценарием)
+# ==============================================================================
+# Vault Agent работает от ОТДЕЛЬНОГО пользователя, создаваемого RLM
+# НЕ путать с monitoring_service_user!
+vault_agent_user: "{{ kae_stend }}-lnx-va-start"
+vault_agent_group: "{{ kae_stend }}-lnx-va-read"
+
+# ==============================================================================
+# RLM API ПАРАМЕТРЫ
+# ==============================================================================
+# RLM (Resource Lifecycle Management) - корпоративный инструмент
+# для автоматизированной установки ПО через заявки
+rlm_api_url: "https://rlm.delta.sbrf.ru"
+
+# URL для скачивания RPM пакетов через RLM
+prometheus_rpm_url: "http://artifactory.sigma.sbrf.ru/artifactory/maven-public/prometheus/prometheus-latest.rpm"
+grafana_rpm_url: "http://artifactory.sigma.sbrf.ru/artifactory/maven-public/grafana/grafana-latest.rpm"
+harvest_rpm_url: "http://artifactory.sigma.sbrf.ru/artifactory/maven-public/harvest/harvest-latest.rpm"
+
+# ==============================================================================
 # VAULT / SECMAN ПАРАМЕТРЫ
 # ==============================================================================
 
