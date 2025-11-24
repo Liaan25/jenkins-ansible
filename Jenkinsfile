@@ -942,6 +942,10 @@ echo "[SUCCESS] Секреты успешно переданы и размеще
                                 --extra-vars "user_admin=${env.USER_ADMIN}" \\
                                 --extra-vars "user_ro=${env.USER_RO}" \\
                                 --extra-vars "monitoring_group=${env.USER_SYS}" \\
+                                --extra-vars "monitoring_service_user=${env.USER_SYS}" \\
+                                --extra-vars "monitoring_ci_user=${env.USER_CI}" \\
+                                --extra-vars "monitoring_admin_user=${env.USER_ADMIN}" \\
+                                --extra-vars "monitoring_ro_user=${env.USER_RO}" \\
                                 --private-key=\${SSH_KEY} \\
                                 ${params.DEBUG ? '-vvv' : '-v'}
                             """
