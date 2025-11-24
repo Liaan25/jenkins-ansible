@@ -946,6 +946,10 @@ echo "[SUCCESS] Секреты успешно переданы и размеще
                                 --extra-vars "monitoring_ci_user=${env.USER_CI}" \\
                                 --extra-vars "monitoring_admin_user=${env.USER_ADMIN}" \\
                                 --extra-vars "monitoring_ro_user=${env.USER_RO}" \\
+                                --extra-vars '{"monitoring_dirs":{"base":"/opt/monitoring","bin":"/opt/monitoring/bin","config":"/opt/monitoring/config","data":"/opt/monitoring/data","logs":"/opt/monitoring/logs","scripts":"/opt/monitoring/scripts","backups":"/opt/monitoring/backups"}}' \\
+                                --extra-vars '{"directory_permissions":{"bin":"0750","config":"0750","data":"0770","logs":"0770","scripts":"0755","secrets":"0700"}}' \\
+                                --extra-vars '{"file_permissions":{"private_key":"0600","certificate":"0640","config":"0640","script":"0755"}}' \\
+                                --extra-vars "secrets_dir=/dev/shm/monitoring_secrets" \\
                                 --private-key=\${SSH_KEY} \\
                                 ${params.DEBUG ? '-vvv' : '-v'}
                             """
