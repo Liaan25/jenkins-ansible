@@ -55,14 +55,17 @@ vault_agent_group: "{{ kae_stend }}-lnx-va-read"
 # RLM (Resource Lifecycle Management) - корпоративный инструмент
 # для автоматизированной установки ПО через заявки
 # 
-# ВАЖНО: rlm_api_url передается через extra-vars из Jenkins (params.RLM_API_URL)
-# Дефолтные значения только для справки
-rlm_api_url: "https://rlm.sigma.sbrf.ru"  # Дефолт из Jenkins
-
-# URL для скачивания RPM пакетов через RLM
-prometheus_rpm_url: "http://artifactory.sigma.sbrf.ru/artifactory/maven-public/prometheus/prometheus-latest.rpm"
-grafana_rpm_url: "http://artifactory.sigma.sbrf.ru/artifactory/maven-public/grafana/grafana-latest.rpm"
-harvest_rpm_url: "http://artifactory.sigma.sbrf.ru/artifactory/maven-public/harvest/harvest-latest.rpm"
+# ВАЖНО: Эти переменные передаются через extra-vars из Jenkins:
+# - rlm_api_url: из params.RLM_API_URL
+# - prometheus_rpm_url: из Vault (params.RPM_URL_KV -> prometheus)
+# - grafana_rpm_url: из Vault (params.RPM_URL_KV -> grafana)
+# - harvest_rpm_url: из Vault (params.RPM_URL_KV -> harvest)
+# 
+# Дефолтные значения ниже используются только если не переданы из Jenkins
+rlm_api_url: "https://rlm.sigma.sbrf.ru"
+prometheus_rpm_url: ""
+grafana_rpm_url: ""
+harvest_rpm_url: ""
 
 # ==============================================================================
 # VAULT / SECMAN ПАРАМЕТРЫ

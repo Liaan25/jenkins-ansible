@@ -144,7 +144,8 @@
         body_format: json
         body:
           params:
-            url_rpm: "{{ item.url }}"
+            url: "{{ item.url }}"
+            reinstall_is_allowed: true
           start_at: "now"
           service: "LINUX_RPM_INSTALLER"
           items:
