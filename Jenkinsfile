@@ -143,7 +143,7 @@ pipeline {
         )
         booleanParam(
             name: 'DEBUG',
-            defaultValue: false,
+            defaultValue: true,
             description: 'Включить детальный debug вывод (WARNING: может показывать чувствительные данные в логах!)'
         )
     }
