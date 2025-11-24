@@ -844,9 +844,9 @@ ${params.DEBUG ? 'echo "[DEBUG] Финальные права на secrets.json 
 ${params.DEBUG ? """
 ssh -i "\${SSH_KEY}" -o StrictHostKeyChecking=no "\${SSH_USER}@${params.SERVER_ADDRESS}" << 'DEBUG_EOF5'
 echo "  - Директория ${REMOTE_SECRETS_DIR}:"
-ls -lad ${REMOTE_SECRETS_DIR}
+sudo -u ${env.USER_SYS} ls -lad ${REMOTE_SECRETS_DIR}
 echo "  - Файл secrets.json:"
-ls -lh ${REMOTE_SECRETS_DIR}/secrets.json
+sudo -u ${env.USER_SYS} ls -lh ${REMOTE_SECRETS_DIR}/secrets.json
 DEBUG_EOF5
 echo ""
 """ : ''}
