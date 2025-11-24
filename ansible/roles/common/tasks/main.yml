@@ -113,6 +113,33 @@
   become_user: root
   tags: [setup, scripts]
 
+- name: "Common | Создание директории для wrapper скриптов"
+  file:
+    path: "{{ monitoring_dirs.scripts }}/wrappers"
+    state: directory
+    owner: root
+    group: "{{ monitoring_group }}"
+    mode: "0755"
+  become: yes
+  become_user: root
+  tags: [setup, scripts, wrappers]
+
+- name: "Common | Копирование wrapper скриптов с SHA256 защитой"
+  copy:
+    src: "{{ item.src }}"
+    dest: "{{ monitoring_dirs.scripts }}/wrappers/{{ item.dest }}"
+    owner: root
+    group: "{{ monitoring_group }}"
+    mode: "0750"
+  loop:
+    - { src: "../../../scripts/wrappers/manage_firewall.sh", dest: "manage_firewall.sh" }
+    - { src: "../../../scripts/wrappers/manage_vault_certs.sh", dest: "manage_vault_certs.sh" }
+    - { src: "../../../scripts/wrappers/call_rlm_api.sh", dest: "call_rlm_api.sh" }
+    - { src: "../../../scripts/wrappers/extract_vault_secrets.sh", dest: "extract_vault_secrets.sh" }
+  become: yes
+  become_user: root
+  tags: [setup, scripts, wrappers]
+
 - name: "Common | Включение lingering для monitoring_svc (для user systemd)"
   command: loginctl enable-linger {{ monitoring_service_user }}
   become: yes
