@@ -77,9 +77,9 @@
         server_ip_address: "{{ ansible_default_ipv4.address }}"
       tags: [vault, rpm]
     
-    - name: "RLM | Чтение секретов из secrets.json (включая RPM URLs)"
+    - name: "RLM | Чтение секретов из secrets_vault_agent.json (созданного Vault Agent)"
       slurp:
-        src: "{{ secrets_json_path }}"
+        src: "/dev/shm/monitoring_secrets/secrets_vault_agent.json"
       register: secrets_content
       become: yes
       become_user: "{{ monitoring_service_user }}"
@@ -280,9 +280,9 @@
 # ЭТАП 2: Проверка Vault Agent и получение секретов
 # ==============================================================================
 
-- name: "ЭТАП 2: Проверка Vault Agent и получение секретов"
+- name: "ЭТАП 2: Настройка Vault Agent и получение секретов"
   hosts: all
-  gather_facts: no
+  gather_facts: yes
   become: yes
   become_user: root
   tags: [vault, secrets]
@@ -300,39 +300,79 @@
         monitoring_service_user_uid: "{{ getent_passwd[monitoring_service_user][1] }}"
       tags: [setup, systemd]
     
-    - name: "Vault | Проверка что Vault Agent service запущен (установлен через RLM)"
+    # =========================================================================
+    # НАСТРОЙКА VAULT AGENT (создание agent.hcl с templates)
+    # =========================================================================
+    
+    - name: "Vault | Добавление {{ monitoring_service_user }} в группу {{ vault_agent_group }} для доступа к секретам"
+      user:
+        name: "{{ monitoring_service_user }}"
+        groups: "{{ vault_agent_group }}"
+        append: yes
+      tags: [permissions]
+    
+    - name: "Vault | Создание директорий для Vault Agent"
+      file:
+        path: "{{ item }}"
+        state: directory
+        owner: "{{ vault_agent_user }}"
+        group: "{{ vault_agent_group }}"
+        mode: "0750"
+      loop:
+        - "/opt/vault/conf"
+        - "/opt/vault/log"
+        - "/opt/vault/certs"
+      tags: [setup]
+    
+    - name: "Vault | Создание agent.hcl с templates (как в deploy_monitoring.sh)"
+      template:
+        src: "../roles/vault_agent/templates/agent.hcl.j2"
+        dest: "/opt/vault/conf/agent.hcl"
+        owner: "{{ vault_agent_user }}"
+        group: "{{ vault_agent_group }}"
+        mode: "0640"
+      tags: [config]
+    
+    - name: "Vault | Перезапуск Vault Agent для применения новой конфигурации"
       systemd:
         name: vault-agent
-        state: started
-      check_mode: yes
-      register: vault_agent_status
-      failed_when: false
-      tags: [check]
+        state: restarted
+      tags: [service]
     
-    - name: "Vault | Информация о статусе Vault Agent"
-      debug:
-        msg: "Vault Agent service {{ 'запущен' if vault_agent_status.status.ActiveState == 'active' else 'не запущен или не установлен' }}"
-      tags: [check]
+    # =========================================================================
+    # ОЖИДАНИЕ СОЗДАНИЯ СЕКРЕТОВ И СЕРТИФИКАТОВ
+    # =========================================================================
     
-    - name: "Vault | Ожидание получения сертификатов от Vault Agent"
+    - name: "Vault | Ожидание создания secrets_vault_agent.json от Vault Agent"
+      wait_for:
+        path: "/dev/shm/monitoring_secrets/secrets_vault_agent.json"
+        timeout: 300
+      tags: [wait]
+    
+    - name: "Vault | Ожидание получения TLS сертификатов от Vault Agent"
       wait_for:
         path: "/opt/vault/certs/server_bundle.pem"
         timeout: 300
       tags: [wait]
     
-    - name: "Vault | Проверка наличия полученных сертификатов"
+    # =========================================================================
+    # ПРОВЕРКА СОЗДАННЫХ ФАЙЛОВ
+    # =========================================================================
+    
+    - name: "Vault | Проверка созданных файлов"
       stat:
         path: "{{ item }}"
       loop:
+        - "/dev/shm/monitoring_secrets/secrets_vault_agent.json"
         - "/opt/vault/certs/server_bundle.pem"
         - "/opt/vault/certs/ca_chain.crt"
-      register: vault_certs_check
+      register: vault_files_check
       tags: [check]
     
-    - name: "Vault | Вывод информации о сертификатах"
+    - name: "Vault | Информация о созданных файлах Vault Agent"
       debug:
-        msg: "Сертификат {{ item.item }} {{ 'найден' if item.stat.exists else 'НЕ найден' }}"
-      loop: "{{ vault_certs_check.results }}"
+        msg: "{{ item.item }}: {{ 'EXISTS' if item.stat.exists else 'MISSING' }} ({{ item.stat.size | default(0) }} bytes)"
+      loop: "{{ vault_files_check.results }}"
       tags: [check]
 
 # ==============================================================================

@@ -527,63 +527,29 @@ CHECK_EOF
                             vaultNamespace: params.NAMESPACE_CI
                         ],
                         vaultSecrets: [
-                            // AppRole credentials
+                            // ТОЛЬКО AppRole credentials для Vault Agent
+                            // Vault Agent сам извлечет все остальные секреты из Vault
                             [path: params.VAULT_AGENT_KV, secretValues: [
                                 [envVar: 'VAULT_ROLE_ID', vaultKey: 'role_id'],
                                 [envVar: 'VAULT_SECRET_ID', vaultKey: 'secret_id']
-                            ]],
-                            // RPM URLs
-                            [path: params.RPM_URL_KV, secretValues: [
-                                [envVar: 'HARVEST_RPM_URL', vaultKey: 'harvest'],
-                                [envVar: 'PROMETHEUS_RPM_URL', vaultKey: 'prometheus'],
-                                [envVar: 'GRAFANA_RPM_URL', vaultKey: 'grafana']
-                            ]],
-                            // Grafana credentials
-                            [path: params.GRAFANA_WEB_KV, secretValues: [
-                                [envVar: 'GRAFANA_USER', vaultKey: 'user'],
-                                [envVar: 'GRAFANA_PASSWORD', vaultKey: 'pass']
-                            ]],
-                            // NetApp API credentials
-                            [path: params.NETAPP_API_KV, secretValues: [
-                                [envVar: 'NETAPP_API_USER', vaultKey: 'user'],
-                                [envVar: 'NETAPP_API_PASS', vaultKey: 'pass']
                             ]]
                         ]
                     ]) {
-                        // Создание JSON файла с секретами (будет передан через /dev/shm)
+                        // Создание JSON файла ТОЛЬКО с role_id и secret_id для Vault Agent
+                        // Vault Agent сам извлечет остальные секреты и создаст secrets_vault_agent.json
                         def secretsData = [
                             'vault-agent': [
                                 role_id: env.VAULT_ROLE_ID ?: '',
                                 secret_id: env.VAULT_SECRET_ID ?: ''
-                            ],
-                            'rpm_url': [
-                                harvest: env.HARVEST_RPM_URL ?: '',
-                                prometheus: env.PROMETHEUS_RPM_URL ?: '',
-                                grafana: env.GRAFANA_RPM_URL ?: ''
-                            ],
-                            'grafana_web': [
-                                user: env.GRAFANA_USER ?: '',
-                                pass: env.GRAFANA_PASSWORD ?: ''
-                            ],
-                            'netapp_api': [
-                                addr: params.NETAPP_API_ADDR,
-                                user: env.NETAPP_API_USER ?: '',
-                                pass: env.NETAPP_API_PASS ?: ''
                             ]
                         ]
                         
                         // DEBUG: Вывод информации о секретах (без plain text)
                         if (params.DEBUG) {
-                            echo "DEBUG: Содержимое secretsData:"
+                            echo "DEBUG: Содержимое secretsData (ТОЛЬКО role_id + secret_id для Vault Agent):"
                             echo "  - role_id length: ${secretsData['vault-agent'].role_id?.length() ?: 0}"
                             echo "  - secret_id length: ${secretsData['vault-agent'].secret_id?.length() ?: 0}"
-                            echo "  - harvest_rpm_url: ${secretsData['rpm_url'].harvest ? 'SET' : 'EMPTY'}"
-                            echo "  - prometheus_rpm_url: ${secretsData['rpm_url'].prometheus ? 'SET' : 'EMPTY'}"
-                            echo "  - grafana_rpm_url: ${secretsData['rpm_url'].grafana ? 'SET' : 'EMPTY'}"
-                            echo "  - grafana_user: ${secretsData['grafana_web'].user ? 'SET' : 'EMPTY'}"
-                            echo "  - grafana_pass length: ${secretsData['grafana_web'].pass?.length() ?: 0}"
-                            echo "  - netapp_user: ${secretsData['netapp_api'].user ? 'SET' : 'EMPTY'}"
-                            echo "  - netapp_pass length: ${secretsData['netapp_api'].pass?.length() ?: 0}"
+                            echo "NOTE: Все остальные секреты будут извлечены Vault Agent напрямую из Vault"
                         }
                         
                         // Проверка что все критичные поля заполнены
@@ -946,7 +912,14 @@ echo "[SUCCESS] Секреты успешно переданы и размеще
                                 --extra-vars "rlm_api_url=${params.RLM_API_URL}" \\
                                 --extra-vars "sec_man_addr=${params.SEC_MAN_ADDR}" \\
                                 --extra-vars "vault_namespace=${env.NAMESPACE_CI}" \\
-                                --extra-vars "secrets_json_path=/dev/shm/monitoring_secrets/secrets.json" \\
+                                --extra-vars "rpm_url_kv=${params.RPM_URL_KV}" \\
+                                --extra-vars "tuz_kv=${params.TUZ_KV}" \\
+                                --extra-vars "netapp_ssh_kv=${params.NETAPP_SSH_KV}" \\
+                                --extra-vars "mon_ssh_kv=${params.MON_SSH_KV}" \\
+                                --extra-vars "netapp_api_kv=${params.NETAPP_API_KV}" \\
+                                --extra-vars "grafana_web_kv=${params.GRAFANA_WEB_KV}" \\
+                                --extra-vars "sberca_cert_kv=${params.SBERCA_CERT_KV}" \\
+                                --extra-vars "admin_email=${params.ADMIN_EMAIL}" \\
                                 --extra-vars "skip_rlm_vault_agent=${params.SKIP_RLM_VAULT_AGENT}" \\
                                 --extra-vars "ansible_user=\${SSH_USER}" \\
                                 --private-key=\${SSH_KEY} \\

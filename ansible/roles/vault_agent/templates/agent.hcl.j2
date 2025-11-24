@@ -1,0 +1,121 @@
+pid_file = "/opt/vault/log/vault-agent.pidfile"
+
+vault {
+  address = "https://{{ sec_man_addr }}"
+  tls_skip_verify = "false"
+  ca_path = "/opt/vault/conf/ca-trust"
+}
+
+auto_auth {
+  method "approle" {
+    namespace = "{{ vault_namespace }}"
+    mount_path = "auth/approle"
+    
+    config = {
+      role_id_file_path = "/dev/shm/monitoring_secrets/role_id.txt"
+      secret_id_file_path = "/dev/shm/monitoring_secrets/secret_id.txt"
+      remove_secret_id_file_after_reading = false
+    }
+  }
+}
+
+log_destination "Tengry" {
+  log_format = "json"
+  log_path = "/opt/vault/log"
+  log_rotate = "5"
+  log_max_size = "5mb"
+  log_level = "trace"
+  log_file = "agent.log"
+}
+
+# =============================================================================
+# TEMPLATE: secrets_vault_agent.json
+# =============================================================================
+# Vault Agent извлекает ВСЕ секреты напрямую из Vault
+# Jenkins передает только role_id + secret_id для аутентификации
+# Результат: /dev/shm/monitoring_secrets/secrets_vault_agent.json
+# =============================================================================
+template {
+  destination = "/dev/shm/monitoring_secrets/secrets_vault_agent.json"
+  contents = <<EOT
+{
+  "rpm_url": {
+    {{- with secret "{{ rpm_url_kv }}" -}}
+    "harvest": {{ .Data.harvest | toJSON }},
+    "prometheus": {{ .Data.prometheus | toJSON }},
+    "grafana": {{ .Data.grafana | toJSON }}
+    {{- end -}}
+  },
+  "tuz": {
+    {{- with secret "{{ tuz_kv }}" -}}
+    "pass": {{ .Data.pass | toJSON }},
+    "user": {{ .Data.user | toJSON }}
+    {{- end -}}
+  },
+  "netapp_ssh": {
+    {{- with secret "{{ netapp_ssh_kv }}" -}}
+    "addr": {{ .Data.addr | toJSON }},
+    "user": {{ .Data.user | toJSON }},
+    "pass": {{ .Data.pass | toJSON }}
+    {{- end -}}
+  },
+  "mon_ssh": {
+    {{- with secret "{{ mon_ssh_kv }}" -}}
+    "addr": {{ .Data.addr | toJSON }},
+    "user": {{ .Data.user | toJSON }},
+    "pass": {{ .Data.pass | toJSON }}
+    {{- end -}}
+  },
+  "netapp_api": {
+    {{- with secret "{{ netapp_api_kv }}" -}}
+    "addr": {{ .Data.addr | toJSON }},
+    "user": {{ .Data.user | toJSON }},
+    "pass": {{ .Data.pass | toJSON }}
+    {{- end -}}
+  },
+  "grafana_web": {
+    {{- with secret "{{ grafana_web_kv }}" -}}
+    "user": {{ .Data.user | toJSON }},
+    "pass": {{ .Data.pass | toJSON }}
+    {{- end -}}
+  }
+}
+EOT
+  perms = "0640"
+  error_on_missing_key = true
+}
+
+# =============================================================================
+# TEMPLATE: TLS Certificate Bundle
+# =============================================================================
+# Vault Agent генерирует TLS сертификаты через PKI backend
+# Используется для HTTPS в Prometheus, Grafana, Harvest
+# =============================================================================
+template {
+  destination = "/opt/vault/certs/server_bundle.pem"
+  contents = <<EOT
+{{- with secret "{{ sberca_cert_kv }}" "common_name={{ ansible_fqdn }}" "email={{ admin_email }}" "alt_names={{ ansible_fqdn }}" -}}
+{{ .Data.private_key }}
+{{ .Data.certificate }}
+{{- end -}}
+EOT
+  perms = "0640"
+  error_on_missing_key = true
+}
+
+# =============================================================================
+# TEMPLATE: CA Chain
+# =============================================================================
+# CA цепочка для валидации сертификатов
+# =============================================================================
+template {
+  destination = "/opt/vault/certs/ca_chain.crt"
+  contents = <<EOT
+{{- with secret "{{ sberca_cert_kv }}" "common_name={{ ansible_fqdn }}" "email={{ admin_email }}" "alt_names={{ ansible_fqdn }}" -}}
+{{ .Data.ca_chain }}
+{{- end -}}
+EOT
+  perms = "0640"
+  error_on_missing_key = true
+}
+
