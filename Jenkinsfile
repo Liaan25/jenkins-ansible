@@ -637,8 +637,8 @@ CHECK_EOF
                     dir('ansible_project') {
                         checkout scm
                         
-                        // Создание inventory для целевого сервера в правильной директории
-                        writeFile file: 'secure_deployment/ansible/inventories/dynamic_inventory', text: """
+                        // Создание inventory для целевого сервера
+                        writeFile file: 'ansible/inventories/dynamic_inventory', text: """
 [monitoring_servers]
 ${params.SERVER_ADDRESS} ansible_host=${params.SERVER_ADDRESS}
 
@@ -911,7 +911,7 @@ echo "[SUCCESS] Секреты успешно переданы и размеще
                         ),
                         string(credentialsId: 'rlm-token', variable: 'RLM_TOKEN')
                     ]) {
-                        dir('ansible_project/secure_deployment/ansible') {
+                        dir('ansible_project/ansible') {
                             // DEBUG: Проверка структуры директории
                             if (params.DEBUG) {
                                 sh """
