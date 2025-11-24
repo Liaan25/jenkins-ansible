@@ -760,6 +760,17 @@ echo "[INFO] Создание директории для секретов в /d
 ssh -i "\${SSH_KEY}" -o StrictHostKeyChecking=no "\${SSH_USER}@${params.SERVER_ADDRESS}" \\
     "sudo mkdir -p ${REMOTE_SECRETS_DIR}"
 
+# Шаг 1.5: ВАЖНО! Сброс прав на 755 (может остаться 700 с предыдущего запуска)
+# Это позволит работать с директорией и удалять файлы
+echo "[INFO] Сброс прав на директорию для очистки старых файлов..."
+ssh -i "\${SSH_KEY}" -o StrictHostKeyChecking=no "\${SSH_USER}@${params.SERVER_ADDRESS}" \\
+    "sudo chmod 755 ${REMOTE_SECRETS_DIR}"
+
+# Шаг 1.6: Удаление старых файлов (ПЕРЕД установкой владельца)
+echo "[INFO] Очистка старых файлов secrets.json, role_id.txt, secret_id.txt..."
+ssh -i "\${SSH_KEY}" -o StrictHostKeyChecking=no "\${SSH_USER}@${params.SERVER_ADDRESS}" \\
+    "sudo rm -f ${REMOTE_SECRETS_DIR}/secrets.json ${REMOTE_SECRETS_DIR}/role_id.txt ${REMOTE_SECRETS_DIR}/secret_id.txt"
+
 # Шаг 2: Установка владельца SSH_USER (для записи)
 # SSH_USER (mvp_dev) временно становится владельцем для записи файла
 ssh -i "\${SSH_KEY}" -o StrictHostKeyChecking=no "\${SSH_USER}@${params.SERVER_ADDRESS}" \\
@@ -801,11 +812,6 @@ sudo whoami 2>&1 || echo "  FAILED: sudo (root) не работает"
 DEBUG_EOF3
 echo ""
 """ : ''}
-
-# Удаляем старый файл, если существует (может остаться с предыдущего запуска с другими правами)
-echo "[INFO] Очистка старого файла secrets.json (если существует)..."
-ssh -i "\${SSH_KEY}" -o StrictHostKeyChecking=no "\${SSH_USER}@${params.SERVER_ADDRESS}" \\
-    "sudo rm -f ${REMOTE_SECRETS_DIR}/secrets.json ${REMOTE_SECRETS_DIR}/role_id.txt ${REMOTE_SECRETS_DIR}/secret_id.txt"
 
 cat ${WORKSPACE_LOCAL}/secrets.json | ssh -i "\${SSH_KEY}" -o StrictHostKeyChecking=no "\${SSH_USER}@${params.SERVER_ADDRESS}" \\
     "tee ${REMOTE_SECRETS_DIR}/secrets.json > /dev/null"

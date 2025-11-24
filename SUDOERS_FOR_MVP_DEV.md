@@ -45,6 +45,11 @@ mvp_dev ALL=(root:root) NOPASSWD: /usr/bin/rm -f /dev/shm/monitoring_secrets/sec
 
 ### Изменение прав доступа
 
+**Сброс прав (для очистки старых файлов):**
+```sudoers
+mvp_dev ALL=(root:root) NOPASSWD: /usr/bin/chmod 755 /dev/shm/monitoring_secrets
+```
+
 **Временные права (для записи):**
 ```sudoers
 mvp_dev ALL=(root:root) NOPASSWD: /usr/bin/chmod 750 /dev/shm/monitoring_secrets
@@ -74,6 +79,9 @@ mvp_dev ALL=(root:root) NOPASSWD: /usr/bin/chmod 600 /dev/shm/monitoring_secrets
 
 # Создание директории для секретов в /dev/shm
 mvp_dev ALL=(root:root) NOPASSWD: /usr/bin/mkdir -p /dev/shm/monitoring_secrets
+
+# Сброс прав перед очисткой (может остаться 700 с предыдущего запуска)
+mvp_dev ALL=(root:root) NOPASSWD: /usr/bin/chmod 755 /dev/shm/monitoring_secrets
 
 # Очистка старых файлов перед новым запуском
 mvp_dev ALL=(root:root) NOPASSWD: /usr/bin/rm -f /dev/shm/monitoring_secrets/secrets.json
