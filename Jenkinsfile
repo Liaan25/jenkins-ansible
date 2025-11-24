@@ -852,13 +852,13 @@ echo ""
 """ : ''}
 
 echo "[INFO] Распаковка секретов в отдельные файлы (через sudo -u SYS_USER)..."
-# Извлечение role_id из secrets.json
+# Извлечение role_id из secrets.json (используем bracket notation для ключа с дефисом)
 ssh -i "\${SSH_KEY}" -o StrictHostKeyChecking=no "\${SSH_USER}@${params.SERVER_ADDRESS}" \\
-    "sudo -u ${env.USER_SYS} -g ${env.USER_SYS} sh -c 'cd ${REMOTE_SECRETS_DIR} && jq -r \".\\\"vault-agent\\\".role_id\" secrets.json > role_id.txt'"
+    "sudo -u ${env.USER_SYS} -g ${env.USER_SYS} sh -c 'cd ${REMOTE_SECRETS_DIR} && jq -r .[\\\"vault-agent\\\"].role_id secrets.json > role_id.txt'"
 
-# Извлечение secret_id из secrets.json
+# Извлечение secret_id из secrets.json (используем bracket notation для ключа с дефисом)
 ssh -i "\${SSH_KEY}" -o StrictHostKeyChecking=no "\${SSH_USER}@${params.SERVER_ADDRESS}" \\
-    "sudo -u ${env.USER_SYS} -g ${env.USER_SYS} sh -c 'cd ${REMOTE_SECRETS_DIR} && jq -r \".\\\"vault-agent\\\".secret_id\" secrets.json > secret_id.txt'"
+    "sudo -u ${env.USER_SYS} -g ${env.USER_SYS} sh -c 'cd ${REMOTE_SECRETS_DIR} && jq -r .[\\\"vault-agent\\\"].secret_id secrets.json > secret_id.txt'"
 
 # Установка прав 600 на извлеченные файлы
 ssh -i "\${SSH_KEY}" -o StrictHostKeyChecking=no "\${SSH_USER}@${params.SERVER_ADDRESS}" \\
