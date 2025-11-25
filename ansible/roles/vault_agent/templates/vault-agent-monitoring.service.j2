@@ -7,8 +7,6 @@ Before=prometheus.service grafana.service harvest.service
 
 [Service]
 Type=simple
-User={{ monitoring_service_user }}
-Group={{ monitoring_group }}
 
 # Рабочая директория
 WorkingDirectory={{ vault_conf_dir | dirname }}
