@@ -578,8 +578,8 @@
       tags: [config]
     
     - name: "Prometheus | Копирование systemd unit"
-      copy:
-        src: "../../../systemd/prometheus.service"
+      template:
+        src: "../roles/prometheus/templates/prometheus.service.j2"
         dest: "{{ systemd_user_dir }}/prometheus.service"
         owner: "{{ monitoring_service_user }}"
         group: "{{ monitoring_group }}"
@@ -649,8 +649,8 @@
       tags: [config]
     
     - name: "Grafana | Копирование systemd unit"
-      copy:
-        src: "../../../systemd/grafana.service"
+      template:
+        src: "../roles/grafana/templates/grafana.service.j2"
         dest: "{{ systemd_user_dir }}/grafana.service"
         owner: "{{ monitoring_service_user }}"
         group: "{{ monitoring_group }}"
@@ -711,8 +711,8 @@
       tags: [config]
     
     - name: "Harvest | Копирование systemd unit"
-      copy:
-        src: "../../../systemd/harvest.service"
+      template:
+        src: "../roles/harvest/templates/harvest.service.j2"
         dest: "{{ systemd_user_dir }}/harvest.service"
         owner: "{{ monitoring_service_user }}"
         group: "{{ monitoring_group }}"

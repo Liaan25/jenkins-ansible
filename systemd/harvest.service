@@ -7,8 +7,6 @@ Wants=network-online.target
 [Service]
 Type=oneshot
 RemainAfterExit=yes
-User=monitoring_svc
-Group=monitoring
 
 # Рабочая директория
 WorkingDirectory=/opt/monitoring
