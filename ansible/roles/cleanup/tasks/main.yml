@@ -1,0 +1,98 @@
+---
+# Role: cleanup
+# Описание: Очистка предыдущих установок мониторинговых сервисов
+# Файл: roles/cleanup/tasks/main.yml
+
+- name: "Cleanup | Остановка SYSTEM services"
+  systemd:
+    name: "{{ item }}"
+    state: stopped
+  loop:
+    - prometheus
+    - grafana-server
+    - harvest
+    - harvest-prometheus
+  become: yes
+  become_user: root
+  failed_when: false
+  tags: [cleanup, services]
+
+- name: "Cleanup | Отключение автозапуска SYSTEM services"
+  systemd:
+    name: "{{ item }}"
+    enabled: no
+  loop:
+    - prometheus
+    - grafana-server
+    - harvest
+    - harvest-prometheus
+  become: yes
+  become_user: root
+  failed_when: false
+  tags: [cleanup, services]
+
+- name: "Cleanup | Остановка Harvest через команду (если установлен)"
+  command: harvest stop --config /opt/harvest/harvest.yml
+  become: yes
+  become_user: root
+  failed_when: false
+  changed_when: false
+  when: ansible_facts.packages is defined and 'harvest' in ansible_facts.packages
+  tags: [cleanup, harvest]
+
+- name: "Cleanup | Удаление SYSTEM service files"
+  file:
+    path: "{{ item }}"
+    state: absent
+  loop:
+    - "/usr/lib/systemd/system/prometheus.service"
+    - "/usr/lib/systemd/system/grafana-server.service"
+    - "/usr/lib/systemd/system/harvest.service"
+    - "/usr/lib/systemd/system/harvest-prometheus.service"
+    - "/etc/systemd/system/prometheus.service"
+    - "/etc/systemd/system/grafana-server.service"
+    - "/etc/systemd/system/harvest.service"
+    - "/usr/bin/harvest"
+    - "/usr/local/bin/harvest"
+  become: yes
+  become_user: root
+  tags: [cleanup, files]
+
+- name: "Cleanup | Удаление старых конфигурационных директорий"
+  file:
+    path: "{{ item }}"
+    state: absent
+  loop:
+    - "/etc/prometheus"
+    - "/etc/grafana"
+    - "/etc/harvest"
+    - "/var/lib/prometheus"
+    - "/var/lib/grafana"
+    - "/var/lib/harvest"
+    - "/usr/share/grafana"
+    - "/usr/share/prometheus"
+  become: yes
+  become_user: root
+  tags: [cleanup, dirs]
+
+- name: "Cleanup | Удаление старой директории /opt/harvest (если не используется)"
+  file:
+    path: "/opt/harvest"
+    state: absent
+  become: yes
+  become_user: root
+  when: cleanup_harvest_opt | default(false) | bool
+  tags: [cleanup, dirs]
+
+- name: "Cleanup | Перезагрузка systemd daemon"
+  systemd:
+    daemon_reload: yes
+  become: yes
+  become_user: root
+  tags: [cleanup, systemd]
+
+- name: "Cleanup | Информация о завершении очистки"
+  debug:
+    msg: "Очистка предыдущих установок завершена. SYSTEM services остановлены и удалены."
+  tags: [cleanup]
+

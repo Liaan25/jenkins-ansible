@@ -954,7 +954,7 @@ echo "[INFO] Владелец: ${env.KAE_STEND}-lnx-va-start (Vault Agent мож
                                 --extra-vars "skip_to_verification=${params.SKIP_TO_VERIFICATION}" \\
                                 --extra-vars "ansible_user=\${SSH_USER}" \\
                                 --private-key=\${SSH_KEY} \\
-                                ${params.SKIP_TO_VERIFICATION ? '--skip-tags setup,prepare,install,rlm,vault,secrets,prometheus,grafana,harvest' : ''} \\
+                                ${params.SKIP_TO_VERIFICATION ? '--skip-tags cleanup,setup,prepare,install,rlm,vault,secrets,prometheus,grafana,harvest,mask' : ''} \\
                                 ${params.DEBUG ? '-vvv' : '-v'}
                             """
                         }
