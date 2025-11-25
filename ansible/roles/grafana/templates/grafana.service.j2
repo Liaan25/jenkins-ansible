@@ -11,7 +11,7 @@ Type=simple
 WorkingDirectory={{ monitoring_base_dir }}
 
 # Исполняемый файл и аргументы
-ExecStart={{ monitoring_dirs.bin }}/grafana-server \
+ExecStart=/usr/sbin/grafana-server \
   --config={{ monitoring_dirs.config }}/grafana.ini \
   --homepath={{ monitoring_base_dir }} \
   cfg:default.paths.logs={{ monitoring_dirs.logs }}/grafana \

@@ -11,11 +11,9 @@ Type=simple
 WorkingDirectory={{ monitoring_base_dir }}
 
 # Исполняемый файл и аргументы
-ExecStart={{ monitoring_dirs.bin }}/harvest \
+ExecStart={{ monitoring_dirs.bin }}/harvest start \
   --config {{ monitoring_dirs.config }}/harvest.yml \
-  --loglevel info \
-  --promPort {{ harvest_netapp_port }} \
-  --restPort {{ harvest_unix_port }}
+  --promPort {{ harvest_netapp_port }}
 
 # Graceful shutdown
 ExecReload=/bin/kill -HUP $MAINPID
