@@ -359,3 +359,5 @@ systemctl --user status harvest
 **Следующий шаг:** Запуск Jenkins Pipeline с параметром `DEBUG=true`
 
 
+
+

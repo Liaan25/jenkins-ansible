@@ -6,8 +6,6 @@ Wants=network-online.target
 
 [Service]
 Type=simple
-User={{ monitoring_service_user }}
-Group={{ monitoring_group }}
 
 # Рабочая директория
 WorkingDirectory={{ monitoring_base_dir }}
@@ -15,12 +13,13 @@ WorkingDirectory={{ monitoring_base_dir }}
 # Исполняемый файл и аргументы
 ExecStart={{ monitoring_dirs.bin }}/prometheus \
   --config.file={{ monitoring_dirs.config }}/prometheus.yml \
-  --storage.tsdb.path={{ monitoring_dirs.data }}/prometheus \
-  --web.console.templates={{ monitoring_dirs.config }}/consoles \
-  --web.console.libraries={{ monitoring_dirs.config }}/console_libraries \
   --web.config.file={{ monitoring_dirs.config }}/web-config.yml \
-  --web.external-url=https://%H:{{ prometheus_port }}/ \
-  --web.listen-address=0.0.0.0:{{ prometheus_port }}
+  --storage.tsdb.path={{ monitoring_dirs.data }}/prometheus \
+  --web.console.templates={{ monitoring_base_dir }}/consoles \
+  --web.console.libraries={{ monitoring_base_dir }}/console_libraries \
+  --storage.tsdb.retention.time={{ prometheus.retention_time }} \
+  --storage.tsdb.retention.size={{ prometheus.retention_size }} \
+  --web.listen-address=:{{ prometheus_port }}
 
 # Graceful shutdown
 ExecReload=/bin/kill -HUP $MAINPID
@@ -34,7 +33,7 @@ RestartSec=10s
 Environment="PATH={{ monitoring_dirs.bin }}:/usr/local/bin:/usr/bin:/bin"
 
 # Ограничения ресурсов
-LimitNOFILE=65536
+LimitNOFILE=10000
 LimitNPROC=512
 
 # Безопасность
@@ -42,8 +41,8 @@ NoNewPrivileges=true
 PrivateTmp=true
 ProtectSystem=strict
 ProtectHome=read-only
-ReadWritePaths={{ monitoring_dirs.data }}
-ReadWritePaths={{ monitoring_dirs.logs }}
+ReadWritePaths={{ monitoring_dirs.data }}/prometheus
+ReadWritePaths={{ monitoring_dirs.logs }}/prometheus
 ReadOnlyPaths={{ monitoring_dirs.bin }}
 ReadOnlyPaths={{ monitoring_dirs.config }}
 ReadOnlyPaths=/dev/shm/monitoring_secrets

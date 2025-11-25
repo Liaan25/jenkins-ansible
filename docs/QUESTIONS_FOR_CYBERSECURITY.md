@@ -267,3 +267,5 @@ CI_USER ALL=(SYS_USER:SYS_GROUP) NOPASSWD: /usr/bin/bash -c *
 
 
 
+
+

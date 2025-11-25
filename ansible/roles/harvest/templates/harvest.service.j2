@@ -5,42 +5,40 @@ After=network-online.target
 Wants=network-online.target
 
 [Service]
-Type=oneshot
-RemainAfterExit=yes
-User={{ monitoring_service_user }}
-Group={{ monitoring_group }}
+Type=simple
 
 # Рабочая директория
 WorkingDirectory={{ monitoring_base_dir }}
 
-# Запуск всех pollers
-ExecStart={{ monitoring_dirs.bin }}/harvest start --config {{ monitoring_dirs.config }}/harvest.yml
+# Исполняемый файл и аргументы
+ExecStart={{ monitoring_dirs.bin }}/harvest \
+  --config {{ monitoring_dirs.config }}/harvest.yml \
+  --loglevel info \
+  --promPort {{ harvest_netapp_port }} \
+  --restPort {{ harvest_unix_port }}
 
-# Остановка всех pollers
-ExecStop={{ monitoring_dirs.bin }}/harvest stop --config {{ monitoring_dirs.config }}/harvest.yml
-
-# Перезапуск
-ExecReload={{ monitoring_dirs.bin }}/harvest restart --config {{ monitoring_dirs.config }}/harvest.yml
-
-# Таймауты
-TimeoutStartSec=60s
-TimeoutStopSec=60s
+# Graceful shutdown
+ExecReload=/bin/kill -HUP $MAINPID
+KillMode=process
+KillSignal=SIGTERM
+TimeoutStopSec=30s
 Restart=on-failure
-RestartSec=15s
+RestartSec=10s
 
 # Переменные окружения
 Environment="PATH={{ monitoring_dirs.bin }}:/usr/local/bin:/usr/bin:/bin"
-Environment="HARVEST_CONF={{ monitoring_dirs.config }}/harvest.yml"
+Environment="HARVEST_HOME={{ monitoring_base_dir }}"
 
 # Ограничения ресурсов
-LimitNOFILE=65536
-LimitNPROC=1024
+LimitNOFILE=10000
+LimitNPROC=512
 
 # Безопасность
 NoNewPrivileges=true
 PrivateTmp=true
 ProtectSystem=strict
 ProtectHome=read-only
+ReadWritePaths={{ monitoring_dirs.data }}/harvest
 ReadWritePaths={{ monitoring_dirs.logs }}/harvest
 ReadOnlyPaths={{ monitoring_dirs.bin }}
 ReadOnlyPaths={{ monitoring_dirs.config }}

@@ -201,6 +201,83 @@ ls -laR /opt/monitoring/
 **Версия:** 1.0  
 **Дата:** 18.11.2024
 
+---
+# ==============================================================================
+# БЫСТРАЯ СПРАВКА ПО ДИАГНОСТИКЕ И ИСПРАВЛЕНИЮ ОШИБОК
+# ==============================================================================
+
+## 🚨 ОШИБКА: status=216/GROUP в User Systemd Units
+
+**Проблема:** Сервисы не запускаются с ошибкой "status=216/GROUP"
+
+**Причина:** В User Systemd Units указаны `User=` и `Group=` в секции `[Service]`
+
+**Решение:** Удалить строки `User=` и `Group=` из systemd unit файлов
+
+**Исправленные файлы:**
+- `secure_deployment/ansible/roles/grafana/templates/grafana.service.j2`
+- `secure_deployment/ansible/roles/prometheus/templates/prometheus.service.j2` 
+- `secure_deployment/ansible/roles/harvest/templates/harvest.service.j2`
+
+**Почему это работает:**
+- User Systemd Units автоматически запускаются от имени текущего пользователя
+- Указание `User=` и `Group=` вызывает конфликт с системой
+- Для User Units эти параметры не нужны и должны быть удалены
+
+**Проверка исправления:**
+```bash
+# Перезапустить сервисы после исправления
+sudo -u CI10742292-lnx-mon_sys bash -c 'XDG_RUNTIME_DIR=/run/user/$(id -u) systemctl --user daemon-reload'
+sudo -u CI10742292-lnx-mon_sys bash -c 'XDG_RUNTIME_DIR=/run/user/$(id -u) systemctl --user restart grafana'
+sudo -u CI10742292-lnx-mon_sys bash -c 'XDG_RUNTIME_DIR=/run/user/$(id -u) systemctl --user status grafana'
+```
+
+**Ожидаемый результат:**
+```
+● grafana.service - Grafana Visualization Platform (User Service)
+     Loaded: loaded (/home/CI10742292-lnx-mon_sys/.config/systemd/user/grafana.service; enabled; preset: disabled)
+     Active: active (running) since ...
+```
+---
+# ==============================================================================
+# БЫСТРАЯ СПРАВКА ПО ДИАГНОСТИКЕ И ИСПРАВЛЕНИЮ ОШИБОК
+# ==============================================================================
+
+## 🚨 ОШИБКА: status=216/GROUP в User Systemd Units
+
+**Проблема:** Сервисы не запускаются с ошибкой "status=216/GROUP"
+
+**Причина:** В User Systemd Units указаны `User=` и `Group=` в секции `[Service]`
+
+**Решение:** Удалить строки `User=` и `Group=` из systemd unit файлов
+
+**Исправленные файлы:**
+- `secure_deployment/ansible/roles/grafana/templates/grafana.service.j2`
+- `secure_deployment/ansible/roles/prometheus/templates/prometheus.service.j2` 
+- `secure_deployment/ansible/roles/harvest/templates/harvest.service.j2`
+
+**Почему это работает:**
+- User Systemd Units автоматически запускаются от имени текущего пользователя
+- Указание `User=` и `Group=` вызывает конфликт с системой
+- Для User Units эти параметры не нужны и должны быть удалены
+
+**Проверка исправления:**
+```bash
+# Перезапустить сервисы после исправления
+sudo -u CI10742292-lnx-mon_sys bash -c 'XDG_RUNTIME_DIR=/run/user/$(id -u) systemctl --user daemon-reload'
+sudo -u CI10742292-lnx-mon_sys bash -c 'XDG_RUNTIME_DIR=/run/user/$(id -u) systemctl --user restart grafana'
+sudo -u CI10742292-lnx-mon_sys bash -c 'XDG_RUNTIME_DIR=/run/user/$(id -u) systemctl --user status grafana'
+```
+
+**Ожидаемый результат:**
+```
+● grafana.service - Grafana Visualization Platform (User Service)
+     Loaded: loaded (/home/CI10742292-lnx-mon_sys/.config/systemd/user/grafana.service; enabled; preset: disabled)
+     Active: active (running) since ...
+```
+
+
+
 
 
 
