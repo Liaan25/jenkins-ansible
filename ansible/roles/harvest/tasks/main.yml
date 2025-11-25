@@ -28,6 +28,14 @@
   notify: restart harvest
   tags: [config]
 
+- name: "Harvest | Удаление старого systemd unit (если существует)"
+  file:
+    path: "{{ systemd_user_dir }}/harvest.service"
+    state: absent
+  become: yes
+  become_user: "{{ monitoring_service_user }}"
+  tags: [systemd, cleanup]
+
 - name: "Harvest | Развертывание systemd unit из template"
   template:
     src: harvest.service.j2

@@ -31,6 +31,8 @@ monitoring_base_dir: "/opt/monitoring"
 
 # Динамические имена пользователей (ссылаются на переменные из inventory)
 # Эти переменные приходят готовыми из Jenkins через dynamic_inventory
+# ВАЖНО: Эти переменные НЕ используют Jinja2, так как определяются в inventory!
+# Ansible автоматически подставит значения из [all:vars]
 monitoring_service_user: "{{ user_sys }}"
 monitoring_admin_user: "{{ user_admin }}"
 monitoring_ci_user: "{{ user_ci }}"

@@ -42,6 +42,14 @@
   notify: restart prometheus
   tags: [config]
 
+- name: "Prometheus | Удаление старого systemd unit (если существует)"
+  file:
+    path: "{{ systemd_user_dir }}/prometheus.service"
+    state: absent
+  become: yes
+  become_user: "{{ monitoring_service_user }}"
+  tags: [systemd, cleanup]
+
 - name: "Prometheus | Развертывание systemd unit из template"
   template:
     src: prometheus.service.j2

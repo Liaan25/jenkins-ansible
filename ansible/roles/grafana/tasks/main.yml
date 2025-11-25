@@ -54,6 +54,14 @@
   notify: restart grafana
   tags: [config, provisioning]
 
+- name: "Grafana | Удаление старого systemd unit (если существует)"
+  file:
+    path: "{{ systemd_user_dir }}/grafana.service"
+    state: absent
+  become: yes
+  become_user: "{{ monitoring_service_user }}"
+  tags: [systemd, cleanup]
+
 - name: "Grafana | Развертывание systemd unit из template"
   template:
     src: grafana.service.j2
