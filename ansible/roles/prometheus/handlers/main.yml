@@ -10,7 +10,7 @@
   become: yes
   become_user: "{{ monitoring_service_user }}"
   environment:
-    XDG_RUNTIME_DIR: "/run/user/{{ lookup('pipe', 'id -u ' + monitoring_service_user) }}"
+    XDG_RUNTIME_DIR: "/run/user/{{ monitoring_service_user_uid }}"
 
 - name: reload prometheus
   systemd:
@@ -20,7 +20,7 @@
   become: yes
   become_user: "{{ monitoring_service_user }}"
   environment:
-    XDG_RUNTIME_DIR: "/run/user/{{ lookup('pipe', 'id -u ' + monitoring_service_user) }}"
+    XDG_RUNTIME_DIR: "/run/user/{{ monitoring_service_user_uid }}"
   failed_when: false  # reload может не поддерживаться
 
 - name: restart prometheus
@@ -31,7 +31,7 @@
   become: yes
   become_user: "{{ monitoring_service_user }}"
   environment:
-    XDG_RUNTIME_DIR: "/run/user/{{ lookup('pipe', 'id -u ' + monitoring_service_user) }}"
+    XDG_RUNTIME_DIR: "/run/user/{{ monitoring_service_user_uid }}"
 
 
 

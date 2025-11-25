@@ -47,7 +47,7 @@
   become: yes
   become_user: "{{ monitoring_service_user }}"
   environment:
-    XDG_RUNTIME_DIR: "/run/user/{{ lookup('pipe', 'id -u ' + monitoring_service_user) }}"
+    XDG_RUNTIME_DIR: "/run/user/{{ monitoring_service_user_uid }}"
   tags: [systemd]
 
 - name: "Harvest | Включение сервиса"
@@ -58,7 +58,7 @@
   become: yes
   become_user: "{{ monitoring_service_user }}"
   environment:
-    XDG_RUNTIME_DIR: "/run/user/{{ lookup('pipe', 'id -u ' + monitoring_service_user) }}"
+    XDG_RUNTIME_DIR: "/run/user/{{ monitoring_service_user_uid }}"
   tags: [service]
 
 - name: "Harvest | Запуск сервиса"
@@ -69,7 +69,7 @@
   become: yes
   become_user: "{{ monitoring_service_user }}"
   environment:
-    XDG_RUNTIME_DIR: "/run/user/{{ lookup('pipe', 'id -u ' + monitoring_service_user) }}"
+    XDG_RUNTIME_DIR: "/run/user/{{ monitoring_service_user_uid }}"
   when: deployment.restart_services | default(true)
   tags: [service]
 

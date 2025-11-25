@@ -59,7 +59,7 @@
   become: yes
   become_user: "{{ monitoring_service_user }}"
   environment:
-    XDG_RUNTIME_DIR: "/run/user/{{ lookup('pipe', 'id -u ' + monitoring_service_user) }}"
+    XDG_RUNTIME_DIR: "/run/user/{{ monitoring_service_user_uid }}"
   tags: [systemd]
 
 - name: "Vault Agent | Включение сервиса"
@@ -70,7 +70,7 @@
   become: yes
   become_user: "{{ monitoring_service_user }}"
   environment:
-    XDG_RUNTIME_DIR: "/run/user/{{ lookup('pipe', 'id -u ' + monitoring_service_user) }}"
+    XDG_RUNTIME_DIR: "/run/user/{{ monitoring_service_user_uid }}"
   when: vault_creds.results | selectattr('stat.exists', 'equalto', true) | list | length == 2
   tags: [service]
 
@@ -82,7 +82,7 @@
   become: yes
   become_user: "{{ monitoring_service_user }}"
   environment:
-    XDG_RUNTIME_DIR: "/run/user/{{ lookup('pipe', 'id -u ' + monitoring_service_user) }}"
+    XDG_RUNTIME_DIR: "/run/user/{{ monitoring_service_user_uid }}"
   when: 
     - vault_creds.results | selectattr('stat.exists', 'equalto', true) | list | length == 2
     - deployment.restart_services | default(true)
