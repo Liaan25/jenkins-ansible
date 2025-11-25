@@ -147,6 +147,11 @@ pipeline {
             description: 'Включить детальный debug вывод (WARNING: может показывать чувствительные данные в логах!)'
         )
         booleanParam(
+            name: 'SHORT_LOG',
+            defaultValue: false,
+            description: 'Краткий вывод логов Ansible (только названия задач и статусы, без debug информации)'
+        )
+        booleanParam(
             name: 'SKIP_RLM_VAULT_AGENT',
             defaultValue: false,
             description: 'Пропустить установку Vault Agent через RLM (если уже установлен вручную)'
@@ -955,7 +960,7 @@ echo "[INFO] Владелец: ${env.KAE_STEND}-lnx-va-start (Vault Agent мож
                                 --extra-vars "ansible_user=\${SSH_USER}" \\
                                 --private-key=\${SSH_KEY} \\
                                 ${params.SKIP_TO_VERIFICATION ? '--skip-tags cleanup,setup,prepare,install,rlm,vault,secrets,prometheus,grafana,harvest,mask' : ''} \\
-                                ${params.DEBUG ? '-vvv' : '-v'}
+                                ${params.SHORT_LOG ? '' : (params.DEBUG ? '-vvv' : '-v')}
                             """
                         }
                         
