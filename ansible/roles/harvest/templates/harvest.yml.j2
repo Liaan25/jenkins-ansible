@@ -56,9 +56,9 @@ Pollers:
       - prometheus1
     
     labels:
-      - datacenter: {{ datacenter | default('dc1') }}
-      - environment: {{ environment | default('production') }}
-      - cluster_type: ontap
+      datacenter: {{ datacenter | default('dc1') }}
+      environment: {{ environment | default('production') }}
+      cluster_type: ontap
   
   Unix-Metrics:
     datacenter: Unix

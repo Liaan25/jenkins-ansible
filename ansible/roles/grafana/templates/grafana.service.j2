@@ -13,11 +13,9 @@ WorkingDirectory={{ monitoring_base_dir }}
 # Исполняемый файл и аргументы
 ExecStart=/usr/sbin/grafana-server \
   --config={{ monitoring_dirs.config }}/grafana.ini \
-  --homepath={{ monitoring_base_dir }} \
+  --homepath=/usr/share/grafana \
   cfg:default.paths.logs={{ monitoring_dirs.logs }}/grafana \
-  cfg:default.paths.data={{ monitoring_dirs.data }}/grafana \
-  cfg:default.paths.plugins={{ monitoring_dirs.data }}/grafana/plugins \
-  cfg:default.paths.provisioning={{ monitoring_dirs.config }}/provisioning
+  cfg:default.paths.data={{ monitoring_dirs.data }}/grafana
 
 # Graceful shutdown
 ExecReload=/bin/kill -HUP $MAINPID
