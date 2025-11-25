@@ -53,6 +53,13 @@ else
     echo -e "${RED}❌ Harvest не найден в /opt/harvest/bin/${NC}"
 fi
 
+# Исправление прав доступа на ссылки
+echo ""
+echo "Исправление прав доступа на символические ссылки..."
+sudo chown CI10742292-lnx-mon_ci:CI10742292-lnx-mon_sys "$MONITORING_BIN_DIR"/*
+sudo chmod 750 "$MONITORING_BIN_DIR"/*
+echo -e "${GREEN}✅ Права доступа исправлены${NC}"
+
 # Проверка результата
 echo ""
 echo "Проверка созданных ссылок:"

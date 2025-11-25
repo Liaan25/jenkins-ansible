@@ -217,5 +217,39 @@
   become_user: root
   tags: [setup, binaries]
 
+- name: "Common | Установка правильных прав на символические ссылки"
+  command: chown {{ monitoring_ci_user }}:{{ monitoring_group }} "{{ monitoring_dirs.bin }}/{{ item }}"
+  loop:
+    - grafana-server
+    - prometheus
+    - harvest
+  become: yes
+  become_user: root
+  tags: [setup, binaries]
+
+- name: "Common | Проверка доступа пользователя сервиса к бинарным файлам"
+  command: sudo -u {{ monitoring_service_user }} ls -la "{{ monitoring_dirs.bin }}/{{ item }}"
+  loop:
+    - grafana-server
+    - prometheus
+    - harvest
+  become: yes
+  become_user: root
+  failed_when: false
+  changed_when: false
+  tags: [check, binaries]
+
+- name: "Common | Проверка возможности выполнения бинарных файлов"
+  command: sudo -u {{ monitoring_service_user }} "{{ monitoring_dirs.bin }}/{{ item }}" --version
+  loop:
+    - grafana-server
+    - prometheus
+    - harvest
+  become: yes
+  become_user: root
+  failed_when: false
+  changed_when: false
+  tags: [check, binaries]
+
 
 

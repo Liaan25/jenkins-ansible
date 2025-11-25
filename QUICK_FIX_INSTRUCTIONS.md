@@ -94,6 +94,79 @@ done
 
 Эта задача будет выполняться при каждом развертывании, гарантируя наличие символических ссылок.
 
+## 🚨 НОВАЯ ПРОБЛЕМА: Ссылки созданы, но сервисы не запускаются
+
+### Симптомы
+- Символические ссылки созданы в `/opt/monitoring/bin/`
+- Владелец ссылок: `root:root` (неправильно)
+- Права ссылок: `777` (неправильно)
+- Сервисы все равно не запускаются
+
+### Причина
+Ansible создает символические ссылки с правами по умолчанию (`root:root`, `777`), но пользователь сервиса не имеет доступа.
+
+### Быстрое исправление
+
+```bash
+# Исправить права доступа на символические ссылки
+sudo chown CI10742292-lnx-mon_ci:CI10742292-lnx-mon_sys /opt/monitoring/bin/*
+sudo chmod 750 /opt/monitoring/bin/*
+
+# Проверить результат
+sudo ls -la /opt/monitoring/bin/
+
+# Ожидаемый результат:
+# lrwxr-x--- 1 CI10742292-lnx-mon_ci CI10742292-lnx-mon_sys 24 Nov 25 18:51 grafana-server -> /usr/sbin/grafana-server
+# lrwxr-x--- 1 CI10742292-lnx-mon_ci CI10742292-lnx-mon_sys 24 Nov 25 18:51 harvest -> /opt/harvest/bin/harvest
+# lrwxr-x--- 1 CI10742292-lnx-mon_ci CI10742292-lnx-mon_sys 19 Nov 25 18:51 prometheus -> /usr/bin/prometheus
+
+# Запустить сервисы
+sudo -u CI10742292-lnx-mon_sys bash -c 'XDG_RUNTIME_DIR=/run/user/$(id -u) systemctl --user start grafana'
+sudo -u CI10742292-lnx-mon_sys bash -c 'XDG_RUNTIME_DIR=/run/user/$(id -u) systemctl --user status grafana'
+```
+
+### Проверка исправления
+
+```bash
+# Проверить права доступа
+sudo ls -la /opt/monitoring/bin/
+
+# Проверить доступ пользователя сервиса к бинарным файлам
+sudo -u CI10742292-lnx-mon_sys bash -c 'ls -la /opt/monitoring/bin/'
+
+# Проверить запуск бинарных файлов
+sudo -u CI10742292-lnx-mon_sys bash -c '/opt/monitoring/bin/grafana-server --version'
+sudo -u CI10742292-lnx-mon_sys bash -c '/opt/monitoring/bin/prometheus --version'
+sudo -u CI10742292-lnx-mon_sys bash -c '/opt/monitoring/bin/harvest version'
+
+# Запустить все сервисы
+for service in grafana prometheus harvest; do
+  echo "=== Запуск $service ==="
+  sudo -u CI10742292-lnx-mon_sys bash -c "XDG_RUNTIME_DIR=/run/user/\$(id -u) systemctl --user start $service"
+  sleep 2
+  sudo -u CI10742292-lnx-mon_sys bash -c "XDG_RUNTIME_DIR=/run/user/\$(id -u) systemctl --user status $service" | grep -E "(Active|Main PID)"
+done
+```
+
+### Постоянное решение
+
+Ansible playbook обновлен для автоматической установки правильных прав:
+
+```yaml
+- name: "Common | Установка правильных прав на символические ссылки"
+  file:
+    path: "{{ monitoring_dirs.bin }}/{{ item }}"
+    owner: "{{ monitoring_ci_user }}"
+    group: "{{ monitoring_group }}"
+    mode: "{{ directory_permissions.bin }}"
+  loop:
+    - grafana-server
+    - prometheus
+    - harvest
+```
+
+Эта задача будет выполняться после создания ссылок и гарантировать правильные права доступа.
+
 ## Структура после исправления
 
 ```
