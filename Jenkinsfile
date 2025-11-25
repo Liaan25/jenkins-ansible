@@ -618,6 +618,28 @@ CHECK_EOF
                     dir('ansible_project') {
                         checkout scm
                         
+                        // Вывод информации о текущем коммите
+                        echo """
+                        ================================================
+                        GIT ИНФОРМАЦИЯ
+                        ================================================
+                        """
+                        def gitCommit = sh(returnStdout: true, script: 'git rev-parse HEAD').trim()
+                        def gitBranch = sh(returnStdout: true, script: 'git rev-parse --abbrev-ref HEAD').trim()
+                        def gitMessage = sh(returnStdout: true, script: 'git log -1 --pretty=%B').trim()
+                        def gitAuthor = sh(returnStdout: true, script: 'git log -1 --pretty=%an').trim()
+                        def gitDate = sh(returnStdout: true, script: 'git log -1 --pretty=%ci').trim()
+                        
+                        echo """
+                        Git Commit: ${gitCommit}
+                        Git Branch: ${gitBranch}
+                        Commit Author: ${gitAuthor}
+                        Commit Date: ${gitDate}
+                        Commit Message:
+                        ${gitMessage}
+                        ================================================
+                        """
+                        
                         // Создание inventory для целевого сервера
                         writeFile file: 'ansible/inventories/dynamic_inventory', text: """
 [all]
