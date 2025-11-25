@@ -338,3 +338,4 @@ journalctl --user -u prometheus -f
 **Версия:** 1.0  
 **Статус:** Активный
 
+

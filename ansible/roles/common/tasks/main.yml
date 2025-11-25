@@ -149,7 +149,7 @@
     mode: "0755"
   loop:
     - "verify_security.sh"
-    - "check_services.sh"
+    # Removed: "check_services.sh" - file does not exist in repository
   become: yes
   become_user: root
   tags: [setup, scripts, utils]

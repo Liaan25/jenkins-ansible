@@ -228,3 +228,4 @@ sudo rm /etc/sudoers.d/monitoring_system
 **Статус**: ✅ Готово к использованию
 
 
+

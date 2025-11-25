@@ -601,3 +601,4 @@ cat $HOME/monitoring_sudoers_generated/.last_generated_path
 **Дата создания:** November 19, 2024
 
 
+

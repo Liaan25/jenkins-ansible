@@ -359,3 +359,4 @@ ssh user@server 'sudo -l -U CI10742292-lnx-mon_ci'
 **Статус:** ✅ Production Ready
 
 
+

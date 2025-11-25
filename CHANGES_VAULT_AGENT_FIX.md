@@ -358,3 +358,4 @@ systemctl --user status harvest
 **Статус:** ✅ Готово к развертыванию  
 **Следующий шаг:** Запуск Jenkins Pipeline с параметром `DEBUG=true`
 
+

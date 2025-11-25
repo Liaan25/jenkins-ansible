@@ -111,3 +111,4 @@ print_info "  - ${SECRET_ID_FILE} ($(wc -c < "$SECRET_ID_FILE") bytes)"
 
 exit 0
 
+

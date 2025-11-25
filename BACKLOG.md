@@ -744,3 +744,4 @@ if (params.SSH_CREDENTIALS_ID == 'ssh-mvp-dev') {
 **✅ Все задачи BACKLOG детально описаны и готовы к реализации!**
 
 
+
