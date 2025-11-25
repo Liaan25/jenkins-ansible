@@ -201,5 +201,21 @@
       - "Service User: {{ monitoring_service_user }}"
   tags: [info]
 
+- name: "Common | Создание символических ссылок на бинарные файлы"
+  file:
+    src: "{{ item.src }}"
+    dest: "{{ monitoring_dirs.bin }}/{{ item.dest }}"
+    state: link
+    owner: "{{ monitoring_ci_user }}"
+    group: "{{ monitoring_group }}"
+    force: yes
+  loop:
+    - { src: "/usr/sbin/grafana-server", dest: "grafana-server" }
+    - { src: "/usr/bin/prometheus", dest: "prometheus" }
+    - { src: "/opt/harvest/bin/harvest", dest: "harvest" }
+  become: yes
+  become_user: root
+  tags: [setup, binaries]
+
 
 
