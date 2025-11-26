@@ -1,0 +1,15 @@
+# TLS конфигурация Prometheus для стандартной установки
+# Соответствует подходу из deploy_monitoring.sh
+
+tls_server_config:
+  cert_file: /etc/prometheus/cert/server.crt
+  key_file: /etc/prometheus/cert/server.key
+  min_version: "TLS12"
+  # Внимание: список cipher_suites применяется только к TLS 1.2 (TLS 1.3 не настраивается в Go)
+  cipher_suites:
+    - TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256
+    - TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256
+  client_auth_type: "RequireAndVerifyClientCert"
+  client_ca_file: "/etc/prometheus/cert/ca_chain.crt"
+  client_allowed_sans:
+    - "{{ ansible_host }}"

@@ -1,0 +1,56 @@
+# Prometheus конфигурация для стандартной установки через RLM
+# Соответствует подходу из deploy_monitoring.sh
+
+global:
+  scrape_interval: 60s
+  evaluation_interval: 60s
+  scrape_timeout: 30s
+
+scrape_configs:
+  - job_name: 'prometheus'
+    scheme: https
+    tls_config:
+      cert_file: /etc/prometheus/cert/server.crt
+      key_file: /etc/prometheus/cert/server.key
+      ca_file: /etc/prometheus/cert/ca_chain.crt
+      insecure_skip_verify: false
+    static_configs:
+      - targets: ['{{ ansible_host }}:{{ prometheus_port }}']
+    metrics_path: /metrics
+    scrape_interval: 60s
+
+  - job_name: 'harvest-unix'
+    scheme: https
+    tls_config:
+      cert_file: /etc/prometheus/cert/server.crt
+      key_file: /etc/prometheus/cert/server.key
+      ca_file: /etc/prometheus/cert/ca_chain.crt
+      insecure_skip_verify: false
+    static_configs:
+      - targets: ['{{ ansible_host }}:{{ harvest_unix_port }}']
+    metrics_path: /metrics
+    scrape_interval: 60s
+
+  - job_name: 'harvest-netapp'
+    scheme: https
+    tls_config:
+      cert_file: /etc/prometheus/cert/server.crt
+      key_file: /etc/prometheus/cert/server.key
+      ca_file: /etc/prometheus/cert/ca_chain.crt
+      insecure_skip_verify: false
+    static_configs:
+      - targets: ['{{ ansible_host }}:{{ harvest_netapp_port }}']
+    metrics_path: /metrics
+    scrape_interval: 60s
+
+  - job_name: 'node'
+    scheme: https
+    tls_config:
+      cert_file: /etc/prometheus/cert/server.crt
+      key_file: /etc/prometheus/cert/server.key
+      ca_file: /etc/prometheus/cert/ca_chain.crt
+      insecure_skip_verify: false
+    static_configs:
+      - targets: ['{{ ansible_host }}:9100']
+    metrics_path: /metrics
+    scrape_interval: 60s

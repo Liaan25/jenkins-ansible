@@ -6,16 +6,20 @@ Wants=network-online.target
 
 [Service]
 Type=simple
+User={{ monitoring_service_user }}
+Group={{ monitoring_group }}
 
 # Рабочая директория
 WorkingDirectory={{ monitoring_base_dir }}
 
 # Исполняемый файл и аргументы
-ExecStart=/usr/sbin/grafana-server \
+ExecStart={{ monitoring_dirs.bin }}/grafana-server \
   --config={{ monitoring_dirs.config }}/grafana.ini \
-  --homepath=/usr/share/grafana \
+  --homepath={{ monitoring_base_dir }} \
   cfg:default.paths.logs={{ monitoring_dirs.logs }}/grafana \
-  cfg:default.paths.data={{ monitoring_dirs.data }}/grafana
+  cfg:default.paths.data={{ monitoring_dirs.data }}/grafana \
+  cfg:default.paths.plugins={{ monitoring_dirs.data }}/grafana/plugins \
+  cfg:default.paths.provisioning={{ monitoring_dirs.config }}/provisioning
 
 # Graceful shutdown
 ExecReload=/bin/kill -HUP $MAINPID

@@ -97,8 +97,9 @@ scrape_configs:
 storage:
   tsdb:
     path: {{ monitoring_dirs.data }}/prometheus
-    retention_time: {{ prometheus.retention_time }}
-    retention_size: {{ prometheus.retention_size }}
+    retention:
+      time: {{ prometheus.retention_time }}
+      size: {{ prometheus.retention_size }}
 
 
 

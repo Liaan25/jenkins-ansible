@@ -296,38 +296,4 @@ ansible-playbook -i inventories/production playbooks/update_config.yml
 
 Внутреннее использование в корпоративной среде.
 
-## 🛠️ Устранение неполадок
-
-### Проблема: Сервисы не запускаются (203/EXEC)
-
-**Симптомы:**
-- `systemctl --user status grafana` показывает `status=203/EXEC`
-- `/opt/monitoring/bin/` пустая директория
-- Бинарные файлы установлены в системных каталогах
-
-**Решение:**
-```bash
-# Быстрое исправление
-sudo -u CI10742292-lnx-mon_ci bash
-mkdir -p /opt/monitoring/bin/
-ln -sf /usr/sbin/grafana-server /opt/monitoring/bin/grafana-server
-ln -sf /usr/bin/prometheus /opt/monitoring/bin/prometheus
-ln -sf /opt/harvest/bin/harvest /opt/monitoring/bin/harvest
-chown CI10742292-lnx-mon_ci:CI10742292-lnx-mon_sys /opt/monitoring/bin/*
-chmod 750 /opt/monitoring/bin/*
-```
-
-**Подробнее:** [QUICK_FIX_INSTRUCTIONS.md](QUICK_FIX_INSTRUCTIONS.md)
-
-### Проблема: Отсутствуют бинарные файлы
-
-**Причина:** RLM устанавливает RPM пакеты в системные каталоги
-
-**Расположение бинарных файлов:**
-- Grafana: `/usr/sbin/grafana-server`
-- Prometheus: `/usr/bin/prometheus`
-- Harvest: `/opt/harvest/bin/harvest`
-
-**Решение:** Ansible playbook автоматически создает символические ссылки
-
 

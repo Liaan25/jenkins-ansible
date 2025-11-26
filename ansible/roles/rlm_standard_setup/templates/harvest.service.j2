@@ -1,0 +1,24 @@
+[Unit]
+Description=NetApp Harvest Poller
+After=network.target
+
+[Service]
+Type=oneshot
+User=harvest
+Group=harvest
+ExecStart=/usr/bin/harvest start --config /opt/harvest/harvest.yml
+ExecStop=/usr/bin/harvest stop --config /opt/harvest/harvest.yml
+RemainAfterExit=yes
+
+# Ограничения ресурсов
+LimitNOFILE=65536
+LimitNPROC=512
+
+# Безопасность
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=read-only
+
+[Install]
+WantedBy=multi-user.target

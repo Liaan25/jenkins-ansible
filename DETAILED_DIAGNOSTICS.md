@@ -91,3 +91,4 @@ ansible-playbook -i inventories/production playbooks/deploy_monitoring.yml
 ```
 
 **Сначала выполните диагностику, чтобы понять конкретные ошибки!**
+

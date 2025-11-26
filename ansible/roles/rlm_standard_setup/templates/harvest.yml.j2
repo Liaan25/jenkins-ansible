@@ -1,0 +1,38 @@
+# Harvest конфигурация для стандартной установки через RLM
+# Соответствует подходу из deploy_monitoring.sh
+
+Exporters:
+    prometheus_unix:
+        exporter: Prometheus
+        local_http_addr: 0.0.0.0
+        port: {{ harvest_unix_port }}
+        tls_cert: /opt/harvest/cert/server.crt
+        tls_key: /opt/harvest/cert/server.key
+        tls_ca: /opt/harvest/cert/ca_chain.crt
+
+    prometheus_netapp:
+        exporter: Prometheus
+        local_http_addr: 0.0.0.0
+        port: {{ harvest_netapp_port }}
+        tls_cert: /opt/harvest/cert/server.crt
+        tls_key: /opt/harvest/cert/server.key
+        tls_ca: /opt/harvest/cert/ca_chain.crt
+
+Pollers:
+    {{ netapp_poller_name }}:
+        datacenter: DC1
+        addr: {{ netapp_api_addr }}
+        username: {{ netapp_api_user }}
+        password: {{ netapp_api_password }}
+        use_insecure_tls: false
+        collectors:
+            - Zapi
+            - ZapiPerf
+            - Rest
+        exporters:
+            - prometheus_unix
+            - prometheus_netapp
+
+Tools:
+    grafana:
+        # Настройки для интеграции с Grafana (если требуется)

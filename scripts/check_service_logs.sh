@@ -169,3 +169,4 @@ echo ""
 echo "Для детальной диагностики:"
 echo "  sudo -u $MONITORING_USER journalctl --user -u <service> -f"
 echo "  sudo -u $MONITORING_USER /opt/monitoring/bin/<binary> --version"
+

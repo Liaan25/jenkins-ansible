@@ -1,0 +1,277 @@
+---
+# Role: rlm_standard_setup
+# Описание: Настройка сервисов по стандартным путям после установки RLM пакетов
+# Соответствует подходу из deploy_monitoring.sh, но с соблюдением принципов безопасности secure_deployment
+# Файл: roles/rlm_standard_setup/tasks/main.yml
+
+- name: "RLM Standard | Проверка установленных RLM пакетов"
+  package_facts:
+    manager: auto
+  tags: [check, rlm]
+
+- name: "RLM Standard | Информация об установленных пакетах"
+  debug:
+    msg: "Установлен пакет {{ item.key }} версии {{ item.value.version }}"
+  loop: "{{ ansible_facts.packages | dict2items }}"
+  when: 
+    - item.key in ['prometheus', 'grafana', 'harvest']
+    - item.value is defined
+  tags: [check, rlm]
+
+- name: "RLM Standard | Остановка и маскировка системных сервисов"
+  systemd:
+    name: "{{ item }}"
+    state: stopped
+    enabled: no
+    masked: yes
+  loop:
+    - prometheus
+    - grafana-server
+    - harvest
+  become: yes
+  become_user: root
+  failed_when: false
+  tags: [cleanup, services]
+
+- name: "RLM Standard | Создание системных директорий для сертификатов"
+  file:
+    path: "{{ item }}"
+    state: directory
+    owner: "{{ item.owner }}"
+    group: "{{ item.group }}"
+    mode: "{{ item.mode }}"
+  loop:
+    - { path: "/etc/prometheus/cert", owner: "prometheus", group: "prometheus", mode: "0750" }
+    - { path: "/etc/grafana/cert", owner: "grafana", group: "grafana", mode: "0750" }
+    - { path: "/opt/harvest/cert", owner: "harvest", group: "harvest", mode: "0750" }
+  become: yes
+  become_user: root
+  tags: [setup, certs]
+
+- name: "RLM Standard | Копирование сертификатов в системные пути"
+  copy:
+    src: "{{ item.src }}"
+    dest: "{{ item.dest }}"
+    owner: "{{ item.owner }}"
+    group: "{{ item.group }}"
+    mode: "{{ item.mode }}"
+    remote_src: yes
+  loop:
+    - { src: "/opt/monitoring/certs/server_bundle.pem", dest: "/etc/prometheus/cert/server.crt", owner: "prometheus", group: "prometheus", mode: "0640" }
+    - { src: "/opt/monitoring/certs/server_bundle.pem", dest: "/etc/grafana/cert/crt.crt", owner: "grafana", group: "grafana", mode: "0640" }
+    - { src: "/opt/monitoring/certs/server_bundle.pem", dest: "/opt/harvest/cert/server.crt", owner: "harvest", group: "harvest", mode: "0640" }
+    - { src: "/opt/monitoring/certs/ca_chain.crt", dest: "/etc/prometheus/cert/ca_chain.crt", owner: "prometheus", group: "prometheus", mode: "0640" }
+    - { src: "/opt/monitoring/certs/ca_chain.crt", dest: "/etc/grafana/cert/ca_chain.crt", owner: "grafana", group: "grafana", mode: "0640" }
+    - { src: "/opt/monitoring/certs/ca_chain.crt", dest: "/opt/harvest/cert/ca_chain.crt", owner: "harvest", group: "harvest", mode: "0640" }
+  become: yes
+  become_user: root
+  tags: [certs]
+
+- name: "RLM Standard | Извлечение приватного ключа из server_bundle.pem"
+  shell: |
+    openssl pkey -in "/opt/monitoring/certs/server_bundle.pem" -out "{{ item.dest }}"
+  loop:
+    - { dest: "/etc/prometheus/cert/server.key" }
+    - { dest: "/etc/grafana/cert/key.key" }
+    - { dest: "/opt/harvest/cert/server.key" }
+  become: yes
+  become_user: root
+  tags: [certs]
+
+- name: "RLM Standard | Установка прав на приватные ключи"
+  file:
+    path: "{{ item }}"
+    owner: "{{ item.owner }}"
+    group: "{{ item.group }}"
+    mode: "0600"
+  loop:
+    - { path: "/etc/prometheus/cert/server.key", owner: "prometheus", group: "prometheus" }
+    - { path: "/etc/grafana/cert/key.key", owner: "grafana", group: "grafana" }
+    - { path: "/opt/harvest/cert/server.key", owner: "harvest", group: "harvest" }
+  become: yes
+  become_user: root
+  tags: [certs]
+
+- name: "RLM Standard | Настройка Prometheus конфигурации"
+  template:
+    src: "prometheus.yml.j2"
+    dest: "/etc/prometheus/prometheus.yml"
+    owner: "prometheus"
+    group: "prometheus"
+    mode: "0640"
+    validate: 'promtool check config %s'
+  become: yes
+  become_user: root
+  notify: reload prometheus
+  tags: [config, prometheus]
+
+- name: "RLM Standard | Настройка Prometheus TLS конфигурации"
+  template:
+    src: "web-config.yml.j2"
+    dest: "/etc/prometheus/web-config.yml"
+    owner: "prometheus"
+    group: "prometheus"
+    mode: "0640"
+    validate: 'promtool check web-config %s'
+  become: yes
+  become_user: root
+  notify: restart prometheus
+  tags: [config, prometheus]
+
+- name: "RLM Standard | Создание Prometheus environment файла"
+  template:
+    src: "prometheus.env.j2"
+    dest: "/etc/prometheus/prometheus.env"
+    owner: "prometheus"
+    group: "prometheus"
+    mode: "0640"
+  become: yes
+  become_user: root
+  tags: [config, prometheus]
+
+- name: "RLM Standard | Установка прав на данные Prometheus"
+  file:
+    path: "/var/lib/prometheus"
+    state: directory
+    owner: "prometheus"
+    group: "prometheus"
+    mode: "0750"
+    recurse: yes
+  become: yes
+  become_user: root
+  tags: [setup, prometheus]
+
+- name: "RLM Standard | Включение и запуск системного Prometheus"
+  systemd:
+    name: prometheus
+    state: started
+    enabled: yes
+    daemon_reload: yes
+  become: yes
+  become_user: root
+  tags: [service, prometheus]
+
+- name: "RLM Standard | Настройка Grafana конфигурации"
+  template:
+    src: "grafana.ini.j2"
+    dest: "/etc/grafana/grafana.ini"
+    owner: "grafana"
+    group: "grafana"
+    mode: "0640"
+  become: yes
+  become_user: root
+  notify: restart grafana-server
+  tags: [config, grafana]
+
+- name: "RLM Standard | Установка прав на данные Grafana"
+  file:
+    path: "/var/lib/grafana"
+    state: directory
+    owner: "grafana"
+    group: "grafana"
+    mode: "0750"
+    recurse: yes
+  become: yes
+  become_user: root
+  tags: [setup, grafana]
+
+- name: "RLM Standard | Создание директории provisioning для Grafana"
+  file:
+    path: "/etc/grafana/provisioning/{{ item }}"
+    state: directory
+    owner: "grafana"
+    group: "grafana"
+    mode: "0755"
+  loop:
+    - datasources
+    - dashboards
+  become: yes
+  become_user: root
+  tags: [setup, grafana]
+
+- name: "RLM Standard | Копирование datasource provisioning"
+  copy:
+    src: "provisioning/datasources/"
+    dest: "/etc/grafana/provisioning/datasources/"
+    owner: "grafana"
+    group: "grafana"
+    mode: "0644"
+  become: yes
+  become_user: root
+  notify: restart grafana-server
+  tags: [config, grafana, provisioning]
+
+- name: "RLM Standard | Включение и запуск системного Grafana"
+  systemd:
+    name: grafana-server
+    state: started
+    enabled: yes
+    daemon_reload: yes
+  become: yes
+  become_user: root
+  tags: [service, grafana]
+
+- name: "RLM Standard | Настройка Harvest конфигурации"
+  template:
+    src: "harvest.yml.j2"
+    dest: "/opt/harvest/harvest.yml"
+    owner: "harvest"
+    group: "harvest"
+    mode: "0640"
+  become: yes
+  become_user: root
+  notify: restart harvest
+  tags: [config, harvest]
+
+- name: "RLM Standard | Установка прав на данные Harvest"
+  file:
+    path: "/var/lib/harvest"
+    state: directory
+    owner: "harvest"
+    group: "harvest"
+    mode: "0750"
+    recurse: yes
+  become: yes
+  become_user: root
+  tags: [setup, harvest]
+
+- name: "RLM Standard | Создание systemd сервиса для Harvest"
+  template:
+    src: "harvest.service.j2"
+    dest: "/etc/systemd/system/harvest.service"
+    owner: "root"
+    group: "root"
+    mode: "0644"
+  become: yes
+  become_user: root
+  notify: reload systemd
+  tags: [systemd, harvest]
+
+- name: "RLM Standard | Включение и запуск системного Harvest"
+  systemd:
+    name: harvest
+    state: started
+    enabled: yes
+    daemon_reload: yes
+  become: yes
+  become_user: root
+  tags: [service, harvest]
+
+- name: "RLM Standard | Проверка статуса системных сервисов"
+  systemd:
+    name: "{{ item }}"
+  loop:
+    - prometheus
+    - grafana-server
+    - harvest
+  register: service_status
+  changed_when: false
+  become: yes
+  become_user: root
+  tags: [check, services]
+
+- name: "RLM Standard | Вывод статуса системных сервисов"
+  debug:
+    msg: "Сервис {{ item.item }}: {{ 'АКТИВЕН' if item.status.ActiveState == 'active' else 'НЕ АКТИВЕН' }}"
+  loop: "{{ service_status.results }}"
+  tags: [check, services]

@@ -1,0 +1,31 @@
+# Grafana конфигурация для стандартной установки через RLM
+# Соответствует подходу из deploy_monitoring.sh
+
+[server]
+protocol = https
+http_port = {{ grafana_port }}
+domain = {{ ansible_host }}
+cert_file = /etc/grafana/cert/crt.crt
+cert_key = /etc/grafana/cert/key.key
+
+[security]
+allow_embedding = true
+
+[database]
+# Используем встроенную SQLite базу данных (по умолчанию для RLM установки)
+
+[session]
+provider = file
+
+[analytics]
+check_for_updates = false
+
+[log]
+mode = console file
+level = info
+
+[paths]
+data = /var/lib/grafana
+logs = /var/log/grafana
+plugins = /var/lib/grafana/plugins
+provisioning = /etc/grafana/provisioning

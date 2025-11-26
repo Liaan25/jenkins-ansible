@@ -342,3 +342,4 @@ echo "4. Работу Vault Agent для получения секретов"
 echo "5. Логи через: sudo -u $MONITORING_USER journalctl --user -u <service> -f"
 
 print_header "ДИАГНОСТИКА ЗАВЕРШЕНА"
+
