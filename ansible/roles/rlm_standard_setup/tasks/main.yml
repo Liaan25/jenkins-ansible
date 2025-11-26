@@ -204,18 +204,6 @@
   become_user: root
   tags: [setup, prometheus]
 
-- name: "RLM Standard | Создание systemd сервиса для Prometheus"
-  template:
-    src: "prometheus.service.j2"
-    dest: "/etc/systemd/system/prometheus.service"
-    owner: "root"
-    group: "root"
-    mode: "0644"
-  become: yes
-  become_user: root
-  notify: reload systemd
-  tags: [systemd, prometheus]
-
 - name: "RLM Standard | Включение и запуск системного Prometheus"
   systemd:
     name: prometheus
@@ -250,28 +238,6 @@
   become_user: root
   tags: [setup, grafana]
 
-- name: "RLM Standard | Создание systemd сервиса для Grafana"
-  template:
-    src: "grafana.service.j2"
-    dest: "/etc/systemd/system/grafana-server.service"
-    owner: "root"
-    group: "root"
-    mode: "0644"
-  become: yes
-  become_user: root
-  notify: reload systemd
-  tags: [systemd, grafana]
-
-- name: "RLM Standard | Включение и запуск системного Grafana"
-  systemd:
-    name: grafana-server
-    state: started
-    enabled: yes
-    daemon_reload: yes
-  become: yes
-  become_user: root
-  tags: [service, grafana]
-
 - name: "RLM Standard | Создание директории provisioning для Grafana"
   file:
     path: "/etc/grafana/provisioning/{{ item }}"
@@ -297,6 +263,26 @@
   become_user: root
   notify: restart grafana-server
   tags: [config, grafana, provisioning]
+
+- name: "RLM Standard | Включение и запуск системного Grafana"
+  systemd:
+    name: grafana-server
+    state: started
+    enabled: yes
+    daemon_reload: yes
+  become: yes
+  become_user: root
+  tags: [service, grafana]
+
+- name: "RLM Standard | Вычисление NETAPP_POLLER_NAME из NETAPP_API_ADDR"
+  set_fact:
+    netapp_poller_name: "{{ netapp_api_addr | regex_replace('^([^.]+)\\..*$', '\\1') | capitalize }}"
+  tags: [harvest, setup]
+
+- name: "RLM Standard | Информация о вычисленном NETAPP_POLLER_NAME"
+  debug:
+    msg: "NETAPP_API_ADDR={{ netapp_api_addr }}, NETAPP_POLLER_NAME={{ netapp_poller_name }}"
+  tags: [harvest, setup]
 
 - name: "RLM Standard | Настройка Harvest конфигурации"
   template:
