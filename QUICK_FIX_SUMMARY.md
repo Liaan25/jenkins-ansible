@@ -12,6 +12,11 @@
 - **Решение**: Заменили `package_facts` на команду `rpm`
 - **Файлы**: `roles/rlm_standard_setup/tasks/main.yml`
 
+### 3. Ошибка: `Destination directory /etc/prometheus/cert does not exist`
+- **Причина**: Отсутствие родительских директорий `/etc/prometheus/` и `/etc/grafana/`
+- **Решение**: Добавлено создание родительских директорий перед созданием cert директорий
+- **Файлы**: `roles/rlm_standard_setup/tasks/main.yml`
+
 ## 🚀 Теперь можно перезапустить Jenkins pipeline!
 
 ### Параметры для тестирования:
@@ -29,13 +34,12 @@ USE_RLM_STANDARD_SETUP = false
 ### Проверка исправлений:
 
 1. **Синтаксис Ansible**: `ansible-playbook --syntax-check playbooks/deploy_monitoring.yml`
-2. **Тест RPM проверки**: `ansible-playbook playbooks/test_rpm_check.yml`
+2. **Тест RPM проверки**: `ansible-playbook -i inventories/dynamic_inventory playbooks/deploy_monitoring.yml --tags check`
 
 ## 📋 Измененные файлы:
 
 - `playbooks/deploy_monitoring.yml` - исправлены `when` условия
-- `roles/rlm_standard_setup/tasks/main.yml` - заменен `package_facts` на `rpm`
-- `playbooks/test_rpm_check.yml` - тестовый playbook
+- `roles/rlm_standard_setup/tasks/main.yml` - заменен `package_facts` на `rpm` и добавлено создание директорий
 - `HOTFIX_README.md` - документация исправлений
 - `QUICK_FIX_SUMMARY.md` - это файл
 

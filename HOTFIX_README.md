@@ -117,3 +117,52 @@ ansible-playbook --syntax-check playbooks/deploy_monitoring.yml
 ### Результат
 
 Теперь роль `rlm_standard_setup` будет корректно работать даже на системах без Python библиотеки `rpm`.
+
+## HOTFIX 3: Исправление ошибки отсутствия директорий для сертификатов
+
+### Проблема
+
+При копировании сертификатов возникала ошибка:
+
+```
+msg: Destination directory /etc/prometheus/cert does not exist
+msg: Destination directory /etc/grafana/cert does not exist
+```
+
+### Причина
+
+Родительские директории `/etc/prometheus/` и `/etc/grafana/` не существовали, поэтому поддиректории `cert` не могли быть созданы.
+
+### Решение
+
+Добавлено создание родительских директорий перед созданием директорий для сертификатов:
+
+```yaml
+- name: "RLM Standard | Создание родительских директорий для сервисов"
+  file:
+    path: "{{ item }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+  loop:
+    - "/etc/prometheus"
+    - "/etc/grafana"
+```
+
+Также добавлена проверка создания директорий:
+
+```yaml
+- name: "RLM Standard | Проверка создания директорий для сертификатов"
+  stat:
+    path: "{{ item }}"
+  loop:
+    - "/etc/prometheus/cert"
+    - "/etc/grafana/cert"
+    - "/opt/harvest/cert"
+  register: cert_dirs_check
+```
+
+### Результат
+
+Теперь все необходимые директории создаются перед копированием сертификатов, и ошибка `Destination directory does not exist` больше не возникает.

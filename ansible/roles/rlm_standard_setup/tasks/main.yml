@@ -33,9 +33,23 @@
   failed_when: false
   tags: [cleanup, services]
 
-- name: "RLM Standard | Создание системных директорий для сертификатов"
+- name: "RLM Standard | Создание родительских директорий для сервисов"
   file:
     path: "{{ item }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+  loop:
+    - "/etc/prometheus"
+    - "/etc/grafana"
+  become: yes
+  become_user: root
+  tags: [setup, directories]
+
+- name: "RLM Standard | Создание системных директорий для сертификатов"
+  file:
+    path: "{{ item.path }}"
     state: directory
     owner: "{{ item.owner }}"
     group: "{{ item.group }}"
@@ -47,6 +61,22 @@
   become: yes
   become_user: root
   tags: [setup, certs]
+
+- name: "RLM Standard | Проверка создания директорий для сертификатов"
+  stat:
+    path: "{{ item }}"
+  loop:
+    - "/etc/prometheus/cert"
+    - "/etc/grafana/cert"
+    - "/opt/harvest/cert"
+  register: cert_dirs_check
+  tags: [check, certs]
+
+- name: "RLM Standard | Информация о созданных директориях"
+  debug:
+    msg: "Директория {{ item.item }}: {{ 'СОЗДАНА' if item.stat.exists else 'НЕ СОЗДАНА' }}"
+  loop: "{{ cert_dirs_check.results }}"
+  tags: [check, certs]
 
 - name: "RLM Standard | Копирование сертификатов в системные пути"
   copy:
