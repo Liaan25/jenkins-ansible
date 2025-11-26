@@ -12,6 +12,9 @@
 //   - Проверка безопасности после развертывания
 //   - Использование Ansible для идемпотентного развертывания
 //   - Полное логирование всех действий
+//   - Поддержка двух режимов установки:
+//     • Стандартный RLM (системные сервисы, стандартные пути)
+//     • Безопасный (пользовательские сервисы, изолированные пути)
 //
 // ==============================================================================
 
@@ -130,6 +133,13 @@ pipeline {
             name: 'DEPLOYMENT_METHOD',
             choices: ['ansible', 'script'],
             description: 'Метод развертывания: ansible (рекомендуется) или script'
+        )
+        booleanParam(
+            name: 'USE_RLM_STANDARD_SETUP',
+            defaultValue: true,
+            description: '''Использовать стандартную установку через RLM пакеты:
+• true: Стандартные системные сервисы (prometheus, grafana-server, harvest)
+• false: Безопасные пользовательские сервисы (изолированные пути)'''
         )
         booleanParam(
             name: 'RUN_SECURITY_CHECK',
@@ -277,6 +287,7 @@ pipeline {
                     KAE Стенд: ${env.KAE_STEND}
                     NetApp кластер: ${params.NETAPP_API_ADDR}
                     Метод развертывания: ${params.DEPLOYMENT_METHOD}
+                    Режим установки: ${params.USE_RLM_STANDARD_SETUP ? 'Стандартный RLM' : 'Безопасный'}
                     DEBUG режим: ${params.DEBUG}
                     
                     Пользователи (динамически сформированы):
@@ -979,6 +990,7 @@ echo "[INFO] Владелец: ${env.KAE_STEND}-lnx-va-start (Vault Agent мож
                                 --extra-vars "admin_email=${params.ADMIN_EMAIL}" \\
                                 --extra-vars "skip_rlm_vault_agent=${params.SKIP_RLM_VAULT_AGENT}" \\
                                 --extra-vars "skip_to_verification=${params.SKIP_TO_VERIFICATION}" \\
+                                --extra-vars "use_rlm_standard_setup=${params.USE_RLM_STANDARD_SETUP}" \\
                                 --extra-vars "ansible_user=\${SSH_USER}" \\
                                 --private-key=\${SSH_KEY} \\
                                 ${params.SKIP_TO_VERIFICATION ? '--skip-tags cleanup,setup,prepare,install,rlm,vault,secrets,prometheus,grafana,harvest,mask' : ''} \\
@@ -1066,9 +1078,17 @@ echo "[INFO] Владелец: ${env.KAE_STEND}-lnx-va-start (Vault Agent мож
 echo "=========================================="
 echo "ПРОВЕРКА СТАТУСА СЕРВИСОВ:"
 echo "=========================================="
-sudo -u ${env.USER_SYS} -g ${env.USER_SYS} systemctl --user status prometheus | grep "Active:"
-sudo -u ${env.USER_SYS} -g ${env.USER_SYS} systemctl --user status grafana | grep "Active:"
-sudo -u ${env.USER_SYS} -g ${env.USER_SYS} systemctl --user status harvest | grep "Active:"
+if [ "${params.USE_RLM_STANDARD_SETUP}" = "true" ]; then
+    echo "РЕЖИМ: Стандартный RLM (системные сервисы)"
+    sudo systemctl status prometheus | grep "Active:" || echo "Prometheus: НЕ АКТИВЕН"
+    sudo systemctl status grafana-server | grep "Active:" || echo "Grafana: НЕ АКТИВЕН"
+    sudo systemctl status harvest | grep "Active:" || echo "Harvest: НЕ АКТИВЕН"
+else
+    echo "РЕЖИМ: Безопасный (пользовательские сервисы)"
+    sudo -u ${env.USER_SYS} -g ${env.USER_SYS} systemctl --user status prometheus | grep "Active:" || echo "Prometheus: НЕ АКТИВЕН"
+    sudo -u ${env.USER_SYS} -g ${env.USER_SYS} systemctl --user status grafana | grep "Active:" || echo "Grafana: НЕ АКТИВЕН"
+    sudo -u ${env.USER_SYS} -g ${env.USER_SYS} systemctl --user status harvest | grep "Active:" || echo "Harvest: НЕ АКТИВЕН"
+fi
 echo ""
 echo "=========================================="
 echo "ПРОВЕРКА ПОРТОВ:"
@@ -1150,6 +1170,7 @@ EOF
                 ================================================
                 Сервер: ${params.SERVER_ADDRESS}
                 Домен: ${serverDomain}
+                Режим: ${params.USE_RLM_STANDARD_SETUP ? 'Стандартный RLM' : 'Безопасный'}
                 
                 Доступ к сервисам:
                   • Prometheus: https://${params.SERVER_ADDRESS}:${params.PROMETHEUS_PORT}
