@@ -1,0 +1,56 @@
+[Unit]
+Description=Grafana Server
+Documentation=https://grafana.com/docs/
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=grafana
+Group=grafana
+
+# Рабочая директория
+WorkingDirectory=/usr/share/grafana
+
+# Исполняемый файл и аргументы
+ExecStart=/usr/sbin/grafana-server \
+  --config=/etc/grafana/grafana.ini \
+  --homepath=/usr/share/grafana \
+  --packaging=rpm \
+  cfg:default.paths.logs=/var/log/grafana \
+  cfg:default.paths.data=/var/lib/grafana \
+  cfg:default.paths.plugins=/var/lib/grafana/plugins \
+  cfg:default.paths.provisioning=/etc/grafana/provisioning
+
+# Graceful shutdown
+ExecReload=/bin/kill -HUP $MAINPID
+KillMode=process
+KillSignal=SIGTERM
+TimeoutStopSec=30s
+Restart=on-failure
+RestartSec=10s
+
+# Переменные окружения
+EnvironmentFile=-/etc/sysconfig/grafana-server
+
+# Ограничения ресурсов
+LimitNOFILE=10000
+LimitNPROC=512
+
+# Безопасность
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=/var/lib/grafana
+ReadWritePaths=/var/log/grafana
+ReadOnlyPaths=/etc/grafana
+ReadOnlyPaths=/usr/share/grafana
+
+# Логирование
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=grafana
+
+[Install]
+WantedBy=multi-user.target
