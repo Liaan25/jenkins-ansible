@@ -18,12 +18,10 @@
   when: item | length > 0
   tags: [check, rlm]
 
-- name: "RLM Standard | Остановка и маскировка системных сервисов"
+- name: "RLM Standard | Размаскирование системных сервисов"
   systemd:
     name: "{{ item }}"
-    state: stopped
-    enabled: no
-    masked: yes
+    masked: no
   loop:
     - prometheus
     - grafana-server
@@ -31,7 +29,7 @@
   become: yes
   become_user: root
   failed_when: false
-  tags: [cleanup, services]
+  tags: [setup, services]
 
 - name: "RLM Standard | Создание родительских директорий для сервисов"
   file:
