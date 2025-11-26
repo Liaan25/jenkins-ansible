@@ -202,3 +202,55 @@ msg: file ({'path': '/etc/prometheus/cert/server.key', 'owner': 'prometheus', 'g
 ### Результат
 
 Теперь задача установки прав на приватные ключи выполняется только если файлы существуют, и есть альтернативный метод их создания.
+
+## HOTFIX 5: Исправление ошибки отсутствия обработчиков
+
+### Проблема
+
+При выполнении роли возникала ошибка:
+
+```
+ERROR! The requested handler 'reload prometheus' was not found in either the main handlers list nor in the listening handlers list
+```
+
+### Причина
+
+Роль `rlm_standard_setup` использовала уведомления (notify) для обработчиков, но сами обработчики не были определены в директории `handlers`.
+
+### Решение
+
+Создан файл обработчиков `roles/rlm_standard_setup/handlers/main.yml` с определением всех необходимых обработчиков:
+
+```yaml
+- name: reload prometheus
+  systemd:
+    name: prometheus
+    state: reloaded
+    daemon_reload: yes
+
+- name: restart prometheus
+  systemd:
+    name: prometheus
+    state: restarted
+    daemon_reload: yes
+
+- name: restart grafana-server
+  systemd:
+    name: grafana-server
+    state: restarted
+    daemon_reload: yes
+
+- name: restart harvest
+  systemd:
+    name: harvest
+    state: restarted
+    daemon_reload: yes
+
+- name: reload systemd
+  systemd:
+    daemon_reload: yes
+```
+
+### Результат
+
+Теперь все уведомления (notify) в роли `rlm_standard_setup` имеют соответствующие обработчики, и ошибка `handler was not found` больше не возникает.
