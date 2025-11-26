@@ -362,3 +362,34 @@
     msg: "Сервис {{ item.item }}: {{ 'АКТИВЕН' if item.status.ActiveState == 'active' else 'НЕ АКТИВЕН' }}"
   loop: "{{ service_status.results }}"
   tags: [check, services]
+
+- name: "RLM Standard | Проверка установленных исполняемых файлов"
+  stat:
+    path: "{{ item }}"
+  loop:
+    - /usr/bin/prometheus
+    - /usr/sbin/grafana-server
+    - /usr/bin/harvest
+  register: binary_files_check
+  tags: [check, binaries]
+
+- name: "RLM Standard | Информация об исполняемых файлах"
+  debug:
+    msg: "{{ item.item }}: {{ 'EXISTS' if item.stat.exists else 'MISSING' }} (owner: {{ item.stat.pw_name | default('unknown') }}:{{ item.stat.gr_name | default('unknown') }}, mode: {{ item.stat.mode | default('unknown') }})"
+  loop: "{{ binary_files_check.results }}"
+  tags: [check, binaries]
+
+- name: "RLM Standard | Установка прав на исполняемые файлы"
+  file:
+    path: "{{ item.path }}"
+    owner: "{{ item.owner }}"
+    group: "{{ item.group }}"
+    mode: "0755"
+  loop:
+    - { path: "/usr/bin/prometheus", owner: "root", group: "root" }
+    - { path: "/usr/sbin/grafana-server", owner: "root", group: "root" }
+    - { path: "/usr/bin/harvest", owner: "root", group: "root" }
+  when: binary_files_check.results | selectattr("item", "equalto", item.path) | map(attribute="stat.exists") | first | default(false)
+  become: yes
+  become_user: root
+  tags: [permissions, binaries]

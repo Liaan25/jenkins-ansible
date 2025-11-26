@@ -6,9 +6,13 @@ After=network.target
 Type=oneshot
 User=harvest
 Group=harvest
+WorkingDirectory=/opt/harvest
 ExecStart=/usr/bin/harvest start --config /opt/harvest/harvest.yml
 ExecStop=/usr/bin/harvest stop --config /opt/harvest/harvest.yml
 RemainAfterExit=yes
+
+# Переменные окружения
+Environment="PATH=/usr/local/bin:/usr/bin:/bin:/opt/harvest/bin"
 
 # Ограничения ресурсов
 LimitNOFILE=65536

@@ -9,7 +9,7 @@ harvest_unix_port: 12991
 harvest_netapp_port: 12990
 
 # Параметры NetApp для Harvest
-netapp_poller_name: "netapp-cluster"
+netapp_poller_name: "{{ netapp_poller_name | default('netapp-cluster') }}"
 netapp_api_addr: "{{ netapp_api_addr | default('netapp-cluster.example.com') }}"
 netapp_api_user: "{{ netapp_api_user | default('admin') }}"
 netapp_api_password: "{{ netapp_api_password | default('password') }}"

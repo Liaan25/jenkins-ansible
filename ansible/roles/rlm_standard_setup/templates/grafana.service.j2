@@ -9,8 +9,8 @@ Type=simple
 User=grafana
 Group=grafana
 
-# Рабочая директория
-WorkingDirectory=/usr/share/grafana
+# Рабочая директория - используем существующую
+WorkingDirectory=/var/lib/grafana
 
 # Исполняемый файл и аргументы
 ExecStart=/usr/sbin/grafana-server \
