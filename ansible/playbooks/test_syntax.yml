@@ -1,0 +1,20 @@
+---
+# Тестовый playbook для проверки синтаксиса
+- name: "Тест синтаксиса"
+  hosts: all
+  gather_facts: no
+  
+  tasks:
+    - name: "Тестовая задача"
+      debug:
+        msg: "Синтаксис корректен"
+
+- name: "Тест с условием на уровне tasks"
+  hosts: all
+  gather_facts: no
+  
+  tasks:
+    - name: "Условная задача"
+      debug:
+        msg: "Эта задача выполняется условно"
+      when: test_condition | default(false)

@@ -571,22 +571,23 @@
       tags: [rlm, standard]
 
 # ==============================================================================
-# ЭТАП 3: Установка и настройка Prometheus (безопасный режим)
+# ЭТАП 3-5: Установка и настройка сервисов (безопасный режим)
 # ==============================================================================
 
-- name: "ЭТАП 3: Установка и настройка Prometheus"
+- name: "ЭТАП 3-5: Установка и настройка сервисов в безопасном режиме"
   hosts: all
   gather_facts: no
   become: yes
-  tags: [prometheus, install]
+  tags: [prometheus, grafana, harvest, install]
   
   tasks:
     - name: "Проверка режима безопасной установки"
       debug:
-        msg: "Запуск настройки Prometheus в безопасном режиме"
+        msg: "Запуск настройки сервисов в безопасном режиме"
       when: not (use_rlm_standard_setup | default(false))
-      tags: [prometheus]
-    
+      tags: [prometheus, grafana, harvest]
+
+    # Prometheus задачи
     - name: "Prometheus | Копирование конфигурации"
       template:
         src: "../roles/prometheus/templates/prometheus.yml.j2"
@@ -596,7 +597,7 @@
         mode: "{{ file_permissions.config }}"
       become_user: root
       when: not (use_rlm_standard_setup | default(false))
-      tags: [config]
+      tags: [config, prometheus]
     
     - name: "Prometheus | Копирование TLS конфигурации"
       template:
@@ -607,7 +608,7 @@
         mode: "{{ file_permissions.config }}"
       become_user: root
       when: not (use_rlm_standard_setup | default(false))
-      tags: [config]
+      tags: [config, prometheus]
     
     - name: "Prometheus | Копирование systemd unit"
       template:
@@ -618,7 +619,7 @@
         mode: "0644"
       become_user: "{{ monitoring_service_user }}"
       when: not (use_rlm_standard_setup | default(false))
-      tags: [systemd]
+      tags: [systemd, prometheus]
     
     - name: "Prometheus | Перезагрузка systemd"
       systemd:
@@ -628,7 +629,7 @@
       environment:
         XDG_RUNTIME_DIR: "/run/user/{{ monitoring_service_user_uid }}"
       when: not (use_rlm_standard_setup | default(false))
-      tags: [systemd]
+      tags: [systemd, prometheus]
     
     - name: "Prometheus | Проверка текущего статуса сервиса"
       systemd:
@@ -640,13 +641,13 @@
       environment:
         XDG_RUNTIME_DIR: "/run/user/{{ monitoring_service_user_uid }}"
       when: not (use_rlm_standard_setup | default(false))
-      tags: [systemd, service]
+      tags: [systemd, service, prometheus]
     
     - name: "Prometheus | Информация о статусе"
       debug:
         msg: "Prometheus service: {{ prometheus_status.status.ActiveState | default('unknown') }}"
       when: not (use_rlm_standard_setup | default(false))
-      tags: [systemd, service]
+      tags: [systemd, service, prometheus]
     
     - name: "Prometheus | Запуск сервиса (если не запущен)"
       systemd:
@@ -662,27 +663,9 @@
       become_user: "{{ monitoring_service_user }}"
       environment:
         XDG_RUNTIME_DIR: "/run/user/{{ monitoring_service_user_uid }}"
-      tags: [systemd, service]
-  
-  when: not (use_rlm_standard_setup | default(false))
+      tags: [systemd, service, prometheus]
 
-# ==============================================================================
-# ЭТАП 4: Установка и настройка Grafana (безопасный режим)
-# ==============================================================================
-
-- name: "ЭТАП 4: Установка и настройка Grafana"
-  hosts: all
-  gather_facts: no
-  become: yes
-  tags: [grafana, install]
-  
-  tasks:
-    - name: "Проверка режима безопасной установки"
-      debug:
-        msg: "Запуск настройки Grafana в безопасном режиме"
-      when: not (use_rlm_standard_setup | default(false))
-      tags: [grafana]
-    
+    # Grafana задачи
     - name: "Grafana | Копирование конфигурации"
       template:
         src: "../roles/grafana/templates/grafana.ini.j2"
@@ -692,7 +675,7 @@
         mode: "{{ file_permissions.config }}"
       become_user: root
       when: not (use_rlm_standard_setup | default(false))
-      tags: [config]
+      tags: [config, grafana]
     
     - name: "Grafana | Копирование systemd unit"
       template:
@@ -703,7 +686,7 @@
         mode: "0644"
       become_user: "{{ monitoring_service_user }}"
       when: not (use_rlm_standard_setup | default(false))
-      tags: [systemd]
+      tags: [systemd, grafana]
     
     - name: "Grafana | Проверка текущего статуса сервиса"
       systemd:
@@ -715,13 +698,13 @@
       environment:
         XDG_RUNTIME_DIR: "/run/user/{{ monitoring_service_user_uid }}"
       when: not (use_rlm_standard_setup | default(false))
-      tags: [systemd, service]
+      tags: [systemd, service, grafana]
     
     - name: "Grafana | Информация о статусе"
       debug:
         msg: "Grafana service: {{ grafana_status.status.ActiveState | default('unknown') }}"
       when: not (use_rlm_standard_setup | default(false))
-      tags: [systemd, service]
+      tags: [systemd, service, grafana]
     
     - name: "Grafana | Запуск сервиса (если не запущен)"
       systemd:
@@ -737,27 +720,9 @@
       become_user: "{{ monitoring_service_user }}"
       environment:
         XDG_RUNTIME_DIR: "/run/user/{{ monitoring_service_user_uid }}"
-      tags: [systemd, service]
-  
-  when: not (use_rlm_standard_setup | default(false))
+      tags: [systemd, service, grafana]
 
-# ==============================================================================
-# ЭТАП 5: Установка и настройка Harvest (безопасный режим)
-# ==============================================================================
-
-- name: "ЭТАП 5: Установка и настройка Harvest"
-  hosts: all
-  gather_facts: no
-  become: yes
-  tags: [harvest, install]
-  
-  tasks:
-    - name: "Проверка режима безопасной установки"
-      debug:
-        msg: "Запуск настройки Harvest в безопасном режиме"
-      when: not (use_rlm_standard_setup | default(false))
-      tags: [harvest]
-    
+    # Harvest задачи
     - name: "Harvest | Копирование конфигурации"
       template:
         src: "../roles/harvest/templates/harvest.yml.j2"
@@ -767,7 +732,7 @@
         mode: "{{ file_permissions.config }}"
       become_user: root
       when: not (use_rlm_standard_setup | default(false))
-      tags: [config]
+      tags: [config, harvest]
     
     - name: "Harvest | Копирование systemd unit"
       template:
@@ -778,7 +743,7 @@
         mode: "0644"
       become_user: "{{ monitoring_service_user }}"
       when: not (use_rlm_standard_setup | default(false))
-      tags: [systemd]
+      tags: [systemd, harvest]
     
     - name: "Harvest | Проверка текущего статуса сервиса"
       systemd:
@@ -790,13 +755,13 @@
       environment:
         XDG_RUNTIME_DIR: "/run/user/{{ monitoring_service_user_uid }}"
       when: not (use_rlm_standard_setup | default(false))
-      tags: [systemd, service]
+      tags: [systemd, service, harvest]
     
     - name: "Harvest | Информация о статусе"
       debug:
         msg: "Harvest service: {{ harvest_status.status.ActiveState | default('unknown') }}"
       when: not (use_rlm_standard_setup | default(false))
-      tags: [systemd, service]
+      tags: [systemd, service, harvest]
     
     - name: "Harvest | Запуск сервиса (если не запущен)"
       systemd:
@@ -812,7 +777,7 @@
       become_user: "{{ monitoring_service_user }}"
       environment:
         XDG_RUNTIME_DIR: "/run/user/{{ monitoring_service_user_uid }}"
-      tags: [systemd, service]
+      tags: [systemd, service, harvest]
 
 # ==============================================================================
 # ЭТАП 6: Проверка безопасности и верификация
