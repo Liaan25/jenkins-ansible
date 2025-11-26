@@ -4,18 +4,18 @@
 # Соответствует подходу из deploy_monitoring.sh, но с соблюдением принципов безопасности secure_deployment
 # Файл: roles/rlm_standard_setup/tasks/main.yml
 
-- name: "RLM Standard | Проверка установленных RLM пакетов"
-  package_facts:
-    manager: auto
+- name: "RLM Standard | Проверка установленных RLM пакетов через rpm"
+  shell: |
+    rpm -q prometheus grafana harvest 2>/dev/null || true
+  register: rpm_packages_check
+  changed_when: false
   tags: [check, rlm]
 
 - name: "RLM Standard | Информация об установленных пакетах"
   debug:
-    msg: "Установлен пакет {{ item.key }} версии {{ item.value.version }}"
-  loop: "{{ ansible_facts.packages | dict2items }}"
-  when: 
-    - item.key in ['prometheus', 'grafana', 'harvest']
-    - item.value is defined
+    msg: "{{ item }}"
+  loop: "{{ rpm_packages_check.stdout_lines }}"
+  when: item | length > 0
   tags: [check, rlm]
 
 - name: "RLM Standard | Остановка и маскировка системных сервисов"

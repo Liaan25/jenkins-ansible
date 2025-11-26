@@ -72,3 +72,48 @@ ansible-playbook --syntax-check playbooks/deploy_monitoring.yml
 ## Перезапуск
 
 Теперь можно безопасно перезапустить Jenkins pipeline с параметром `USE_RLM_STANDARD_SETUP=true`.
+
+## HOTFIX 2: Исправление ошибки отсутствия Python библиотеки rpm
+
+### Проблема
+
+При выполнении роли `rlm_standard_setup` возникала ошибка:
+
+```
+[WARNING]: Found "rpm" but Failed to import the required Python library (rpm)
+```
+
+### Причина
+
+Модуль `package_facts` требует Python библиотеку `rpm` для работы с RPM пакетами, но на целевом сервере установлен только клиент RPM (`rpm` команда), без Python библиотеки.
+
+### Решение
+
+Заменили использование `package_facts` на прямое использование команды `rpm`:
+
+**Было:**
+```yaml
+- name: "RLM Standard | Проверка установленных RLM пакетов"
+  package_facts:
+    manager: auto
+```
+
+**Стало:**
+```yaml
+- name: "RLM Standard | Проверка установленных RLM пакетов через rpm"
+  shell: |
+    rpm -q prometheus grafana harvest 2>/dev/null || true
+  register: rpm_packages_check
+  changed_when: false
+```
+
+### Преимущества решения:
+
+1. **Не требует установки дополнительных пакетов** - использует существующую команду `rpm`
+2. **Более надежно** - работает даже без Python библиотеки rpm
+3. **Быстрее** - меньше зависимостей и накладных расходов
+4. **Кросс-платформенность** - работает на всех системах с установленным RPM
+
+### Результат
+
+Теперь роль `rlm_standard_setup` будет корректно работать даже на системах без Python библиотеки `rpm`.
