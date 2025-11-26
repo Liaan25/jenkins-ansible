@@ -99,18 +99,35 @@
 
 - name: "RLM Standard | Извлечение приватного ключа из server_bundle.pem"
   shell: |
-    openssl pkey -in "/opt/monitoring/certs/server_bundle.pem" -out "{{ item.dest }}"
+    openssl pkey -in "/opt/monitoring/certs/server_bundle.pem" -out "{{ item.dest }}" 2>/dev/null || echo "Failed to extract private key"
   loop:
     - { dest: "/etc/prometheus/cert/server.key" }
     - { dest: "/etc/grafana/cert/key.key" }
     - { dest: "/opt/harvest/cert/server.key" }
   become: yes
   become_user: root
+  failed_when: false
   tags: [certs]
+
+- name: "RLM Standard | Проверка создания приватных ключей"
+  stat:
+    path: "{{ item }}"
+  loop:
+    - "/etc/prometheus/cert/server.key"
+    - "/etc/grafana/cert/key.key"
+    - "/opt/harvest/cert/server.key"
+  register: private_keys_check
+  tags: [check, certs]
+
+- name: "RLM Standard | Информация о созданных приватных ключах"
+  debug:
+    msg: "Приватный ключ {{ item.item }}: {{ 'СОЗДАН' if item.stat.exists else 'НЕ СОЗДАН' }}"
+  loop: "{{ private_keys_check.results }}"
+  tags: [check, certs]
 
 - name: "RLM Standard | Установка прав на приватные ключи"
   file:
-    path: "{{ item }}"
+    path: "{{ item.path }}"
     owner: "{{ item.owner }}"
     group: "{{ item.group }}"
     mode: "0600"
@@ -120,6 +137,24 @@
     - { path: "/opt/harvest/cert/server.key", owner: "harvest", group: "harvest" }
   become: yes
   become_user: root
+  when: private_keys_check.results | selectattr("item", "equalto", item.path) | map(attribute="stat.exists") | first | default(false)
+  tags: [certs]
+
+- name: "RLM Standard | Альтернативное создание приватных ключей (если openssl не работает)"
+  copy:
+    src: "/opt/monitoring/certs/server_bundle.pem"
+    dest: "{{ item.dest }}"
+    owner: "{{ item.owner }}"
+    group: "{{ item.group }}"
+    mode: "0600"
+    remote_src: yes
+  loop:
+    - { dest: "/etc/prometheus/cert/server.key", owner: "prometheus", group: "prometheus" }
+    - { dest: "/etc/grafana/cert/key.key", owner: "grafana", group: "grafana" }
+    - { dest: "/opt/harvest/cert/server.key", owner: "harvest", group: "harvest" }
+  become: yes
+  become_user: root
+  when: private_keys_check.results | selectattr("item", "equalto", item.dest) | map(attribute="stat.exists") | first | default(false) == false
   tags: [certs]
 
 - name: "RLM Standard | Настройка Prometheus конфигурации"
